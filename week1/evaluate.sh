@@ -1,6 +1,7 @@
 #!/bin/bash
 set -euo pipefail
 
+ulimit -s 8192000
 # Function to calculate N50 from contig.fasta file
 calculate_n50() {
     local fasta_file="$1"
