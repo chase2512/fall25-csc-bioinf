@@ -2,6 +2,12 @@ from dbg_codon import DBG
 from utils_codon import read_data
 import sys
 
+@python
+def set_recursion_limit():
+    import sys
+    sys.setrecursionlimit(1000000)
+
+set_recursion_limit()
 
 if __name__ == "__main__":
     argv = sys.argv
