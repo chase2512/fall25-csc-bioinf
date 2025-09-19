@@ -1,6 +1,21 @@
 #!/bin/bash
 set -euxo pipefail
 
+
+
+echo "Current directory: $(pwd)"
+echo "Files in current directory:"
+ls -la
+
+echo "Files in week1/:"
+ls -la week1/ || echo "week1/ directory not found"
+
+echo "Files in week1/code/:"
+ls -la week1/code/ || echo "week1/code/ directory not found"
+
+echo "Files in week1/data/:"
+ls -la week1/data/ || echo "week1/data/ directory not found"
+
 # Function to calculate N50 from contig.fasta file
 calculate_n50() {
     local fasta_file="$1"
