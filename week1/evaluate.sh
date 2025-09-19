@@ -53,6 +53,16 @@ format_time() {
     printf "%d:%02d" $((seconds/60)) $((seconds%60))
 }
 
+# Set up Codon PATH if not already available
+if ! command -v codon &> /dev/null; then
+    if [[ -f "${HOME}/.codon/bin/codon" ]]; then
+        export PATH="${PATH}:${HOME}/.codon/bin"
+        echo "Added Codon to PATH: ${HOME}/.codon/bin"
+    else
+        echo "Warning: Codon not found in PATH or ${HOME}/.codon/bin"
+    fi
+fi
+
 # Use CODON_PYTHON from environment if available, otherwise auto-detect
 if [[ -z "${CODON_PYTHON:-}" ]]; then
     # Try to find the correct Python library
@@ -68,11 +78,20 @@ fi
 
 echo "Using CODON_PYTHON: ${CODON_PYTHON}"
 
+# Verify Codon is available
+if command -v codon &> /dev/null; then
+    echo "Codon found at: $(which codon)"
+else
+    echo "Error: Codon command not found"
+    echo "PATH: $PATH"
+    exit 1
+fi
+
 # Change to the code directory
 cd "$(dirname "$0")/code"
 
-# Test datasets - only test data1 for debugging
-datasets=("data1")
+# Test all datasets
+datasets=("data1" "data2" "data3" "data4")
 
 # Array to store results
 declare -a results=()
@@ -83,13 +102,13 @@ for dataset in "${datasets[@]}"; do
         continue
     fi
     
-    echo "=== Testing Python version for $dataset ==="
+    # Test Python version
     # Clean up any existing contig.fasta
     rm -f "../data/$dataset/contig.fasta"
     
-    # Time the Python execution (show errors)
+    # Time the Python execution
     python_start=$(date +%s)
-    if python3 main.py "../data/$dataset"; then
+    if python3 main.py "../data/$dataset" >/dev/null 2>&1; then
         python_end=$(date +%s)
         python_runtime_seconds=$((python_end - python_start))
         python_runtime=$(format_time $python_runtime_seconds)
@@ -100,13 +119,16 @@ for dataset in "${datasets[@]}"; do
         python_n50="N/A"
     fi
     
-    echo "=== Testing Codon version for $dataset ==="
+    # Store Python result
+    results+=("$dataset python $python_runtime $python_n50")
+    
+    # Test Codon version
     # Clean up any existing contig.fasta
     rm -f "../data/$dataset/contig.fasta"
     
-    # Time the Codon execution (show errors)
+    # Time the Codon execution
     codon_start=$(date +%s)
-    if codon run -release -plugin seq main_codon.py "../data/$dataset"; then
+    if codon run -release -plugin seq main_codon.py "../data/$dataset" >/dev/null 2>&1; then
         codon_end=$(date +%s)
         codon_runtime_seconds=$((codon_end - codon_start))
         codon_runtime=$(format_time $codon_runtime_seconds)
@@ -117,8 +139,7 @@ for dataset in "${datasets[@]}"; do
         codon_n50="N/A"
     fi
     
-    # Store results
-    results+=("$dataset python $python_runtime $python_n50")
+    # Store Codon result
     results+=("$dataset codon $codon_runtime $codon_n50")
 done
 
