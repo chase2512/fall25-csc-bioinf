@@ -79,8 +79,8 @@ echo "Current stack size: $(ulimit -s)"
 # Change to the code directory
 cd "$(dirname "$0")/code"
 
-# Test only smaller datasets to avoid timeouts
-datasets=("data1" "data2")
+# Test all datasets
+datasets=("data1" "data2" "data3" "data4")
 
 # Array to store results
 declare -a results=()
@@ -94,7 +94,7 @@ for dataset in "${datasets[@]}"; do
     rm -f "../data/$dataset/contig.fasta"
     
     python_start=$(date +%s)
-    if timeout 300 python3 main.py "../data/$dataset" >/dev/null 2>&1; then
+    if timeout 600 python3 main.py "../data/$dataset" >/dev/null 2>&1; then
         python_end=$(date +%s)
         python_runtime_seconds=$((python_end - python_start))
         python_runtime=$(format_time $python_runtime_seconds)
@@ -110,7 +110,7 @@ for dataset in "${datasets[@]}"; do
     rm -f "../data/$dataset/contig.fasta"
     
     codon_start=$(date +%s)
-    if timeout 300 codon run -release -plugin seq main_codon.py "../data/$dataset" >/dev/null 2>&1; then
+    if timeout 600 codon run -release -plugin seq main_codon.py "../data/$dataset" >/dev/null 2>&1; then
         codon_end=$(date +%s)
         codon_runtime_seconds=$((codon_end - codon_start))
         codon_runtime=$(format_time $codon_runtime_seconds)
