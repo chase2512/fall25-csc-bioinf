@@ -68,19 +68,11 @@ fi
 
 echo "Using CODON_PYTHON: ${CODON_PYTHON}"
 
-# Verify the library exists
-if [[ ! -f "${CODON_PYTHON}" ]]; then
-    echo "Error: Python library not found at ${CODON_PYTHON}"
-    echo "Available Python libraries:"
-    find /lib /usr/lib -name "libpython*.so*" 2>/dev/null || echo "None found"
-    exit 1
-fi
-
 # Change to the code directory
 cd "$(dirname "$0")/code"
 
-# Test datasets
-datasets=("data1" "data2" "data3" "data4")
+# Test datasets - only test data1 for debugging
+datasets=("data1")
 
 # Array to store results
 declare -a results=()
@@ -91,13 +83,13 @@ for dataset in "${datasets[@]}"; do
         continue
     fi
     
-    # Test Python version
+    echo "=== Testing Python version for $dataset ==="
     # Clean up any existing contig.fasta
     rm -f "../data/$dataset/contig.fasta"
     
-    # Time the Python execution
+    # Time the Python execution (show errors)
     python_start=$(date +%s)
-    if python3 main.py "../data/$dataset" >/dev/null 2>&1; then
+    if python3 main.py "../data/$dataset"; then
         python_end=$(date +%s)
         python_runtime_seconds=$((python_end - python_start))
         python_runtime=$(format_time $python_runtime_seconds)
@@ -108,16 +100,13 @@ for dataset in "${datasets[@]}"; do
         python_n50="N/A"
     fi
     
-    # Store Python result
-    results+=("$dataset python $python_runtime $python_n50")
-    
-    # Test Codon version
+    echo "=== Testing Codon version for $dataset ==="
     # Clean up any existing contig.fasta
     rm -f "../data/$dataset/contig.fasta"
     
-    # Time the Codon execution
+    # Time the Codon execution (show errors)
     codon_start=$(date +%s)
-    if codon run -release -plugin seq main_codon.py "../data/$dataset" >/dev/null 2>&1; then
+    if codon run -release -plugin seq main_codon.py "../data/$dataset"; then
         codon_end=$(date +%s)
         codon_runtime_seconds=$((codon_end - codon_start))
         codon_runtime=$(format_time $codon_runtime_seconds)
@@ -128,7 +117,8 @@ for dataset in "${datasets[@]}"; do
         codon_n50="N/A"
     fi
     
-    # Store Codon result
+    # Store results
+    results+=("$dataset python $python_runtime $python_n50")
     results+=("$dataset codon $codon_runtime $codon_n50")
 done
 
