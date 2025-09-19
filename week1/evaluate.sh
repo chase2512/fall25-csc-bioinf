@@ -1,5 +1,5 @@
 #!/bin/bash
-set -euo pipefail
+set -euxo pipefail
 
 # Function to calculate N50 from contig.fasta file
 calculate_n50() {
