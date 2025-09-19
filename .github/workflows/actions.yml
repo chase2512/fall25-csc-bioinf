@@ -36,4 +36,8 @@ jobs:
         run: chmod +x week1/evaluate.sh
 
       - name: Week 1
-        run: bash week1/evaluate.sh
+        run: 
+          ulimit -s unlimited
+          cd week1
+          chmod +x evaluate.sh
+          ./evaluate.sh
