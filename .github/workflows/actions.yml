@@ -35,9 +35,9 @@ jobs:
       - name: Make evaluate.sh executable
         run: chmod +x week1/evaluate.sh
 
+      - name: Set stack size
+        run: ulimit -s 8192000
+        
       - name: Week 1
-        run: 
-          ulimit -s unlimited
-          cd week1
-          chmod +x evaluate.sh
-          ./evaluate.sh
+        run: bash week1/evaluate.sh
+        
