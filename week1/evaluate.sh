@@ -53,12 +53,28 @@ format_time() {
     printf "%d:%02d" $((seconds/60)) $((seconds%60))
 }
 
-# Use CODON_PYTHON from environment if available, otherwise use default
+# Use CODON_PYTHON from environment if available, otherwise auto-detect
 if [[ -z "${CODON_PYTHON:-}" ]]; then
-    export CODON_PYTHON=/lib/x86_64-linux-gnu/libpython3.12.so.1.0
+    # Try to find the correct Python library
+    if [[ -f "/lib/x86_64-linux-gnu/libpython3.12.so.1.0" ]]; then
+        export CODON_PYTHON="/lib/x86_64-linux-gnu/libpython3.12.so.1.0"
+    elif [[ -f "/lib/x86_64-linux-gnu/libpython3.12.so" ]]; then
+        export CODON_PYTHON="/lib/x86_64-linux-gnu/libpython3.12.so"
+    else
+        echo "Error: Could not find Python shared library"
+        exit 1
+    fi
 fi
 
 echo "Using CODON_PYTHON: ${CODON_PYTHON}"
+
+# Verify the library exists
+if [[ ! -f "${CODON_PYTHON}" ]]; then
+    echo "Error: Python library not found at ${CODON_PYTHON}"
+    echo "Available Python libraries:"
+    find /lib /usr/lib -name "libpython*.so*" 2>/dev/null || echo "None found"
+    exit 1
+fi
 
 # Change to the code directory
 cd "$(dirname "$0")/code"
@@ -81,11 +97,16 @@ for dataset in "${datasets[@]}"; do
     
     # Time the Python execution
     python_start=$(date +%s)
-    python3 main.py "../data/$dataset" >/dev/null 2>&1
-    python_end=$(date +%s)
-    python_runtime_seconds=$((python_end - python_start))
-    python_runtime=$(format_time $python_runtime_seconds)
-    python_n50=$(calculate_n50 "../data/$dataset/contig.fasta")
+    if python3 main.py "../data/$dataset" >/dev/null 2>&1; then
+        python_end=$(date +%s)
+        python_runtime_seconds=$((python_end - python_start))
+        python_runtime=$(format_time $python_runtime_seconds)
+        python_n50=$(calculate_n50 "../data/$dataset/contig.fasta")
+    else
+        echo "Python execution failed for $dataset"
+        python_runtime="FAILED"
+        python_n50="N/A"
+    fi
     
     # Store Python result
     results+=("$dataset python $python_runtime $python_n50")
@@ -96,11 +117,16 @@ for dataset in "${datasets[@]}"; do
     
     # Time the Codon execution
     codon_start=$(date +%s)
-    codon run -release -plugin seq main_codon.py "../data/$dataset" >/dev/null 2>&1
-    codon_end=$(date +%s)
-    codon_runtime_seconds=$((codon_end - codon_start))
-    codon_runtime=$(format_time $codon_runtime_seconds)
-    codon_n50=$(calculate_n50 "../data/$dataset/contig.fasta")
+    if codon run -release -plugin seq main_codon.py "../data/$dataset" >/dev/null 2>&1; then
+        codon_end=$(date +%s)
+        codon_runtime_seconds=$((codon_end - codon_start))
+        codon_runtime=$(format_time $codon_runtime_seconds)
+        codon_n50=$(calculate_n50 "../data/$dataset/contig.fasta")
+    else
+        echo "Codon execution failed for $dataset"
+        codon_runtime="FAILED"
+        codon_n50="N/A"
+    fi
     
     # Store Codon result
     results+=("$dataset codon $codon_runtime $codon_n50")
