@@ -1,20 +1,5 @@
 #!/bin/bash
-set -euxo pipefail
-
-
-
-echo "Current directory: $(pwd)"
-echo "Files in current directory:"
-ls -la
-
-echo "Files in week1/:"
-ls -la week1/ || echo "week1/ directory not found"
-
-echo "Files in week1/code/:"
-ls -la week1/code/ || echo "week1/code/ directory not found"
-
-echo "Files in week1/data/:"
-ls -la week1/data/ || echo "week1/data/ directory not found"
+set -euo pipefail
 
 # Function to calculate N50 from contig.fasta file
 calculate_n50() {
@@ -68,8 +53,12 @@ format_time() {
     printf "%d:%02d" $((seconds/60)) $((seconds%60))
 }
 
-# Set up environment for Codon
-export CODON_PYTHON=/lib/x86_64-linux-gnu/libpython3.12.so.1.0
+# Use CODON_PYTHON from environment if available, otherwise use default
+if [[ -z "${CODON_PYTHON:-}" ]]; then
+    export CODON_PYTHON=/lib/x86_64-linux-gnu/libpython3.12.so.1.0
+fi
+
+echo "Using CODON_PYTHON: ${CODON_PYTHON}"
 
 # Change to the code directory
 cd "$(dirname "$0")/code"
