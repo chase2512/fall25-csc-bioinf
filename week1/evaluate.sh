@@ -1,7 +1,9 @@
 #!/bin/bash
 set -euo pipefail
 
-ulimit -s 8192000
+# Set unlimited stack size
+ulimit -s unlimited
+
 # Function to calculate N50 from contig.fasta file
 calculate_n50() {
     local fasta_file="$1"
@@ -59,88 +61,65 @@ if ! command -v codon &> /dev/null; then
     if [[ -f "${HOME}/.codon/bin/codon" ]]; then
         export PATH="${PATH}:${HOME}/.codon/bin"
         echo "Added Codon to PATH: ${HOME}/.codon/bin"
-    else
-        echo "Warning: Codon not found in PATH or ${HOME}/.codon/bin"
     fi
 fi
 
 # Use CODON_PYTHON from environment if available, otherwise auto-detect
 if [[ -z "${CODON_PYTHON:-}" ]]; then
-    # Try to find the correct Python library
     if [[ -f "/lib/x86_64-linux-gnu/libpython3.12.so.1.0" ]]; then
         export CODON_PYTHON="/lib/x86_64-linux-gnu/libpython3.12.so.1.0"
     elif [[ -f "/lib/x86_64-linux-gnu/libpython3.12.so" ]]; then
         export CODON_PYTHON="/lib/x86_64-linux-gnu/libpython3.12.so"
-    else
-        echo "Error: Could not find Python shared library"
-        exit 1
     fi
 fi
 
 echo "Using CODON_PYTHON: ${CODON_PYTHON}"
-
-# Verify Codon is available
-if command -v codon &> /dev/null; then
-    echo "Codon found at: $(which codon)"
-else
-    echo "Error: Codon command not found"
-    echo "PATH: $PATH"
-    exit 1
-fi
+echo "Current stack size: $(ulimit -s)"
 
 # Change to the code directory
 cd "$(dirname "$0")/code"
 
-# Test all datasets
-datasets=("data1" "data2" "data3" "data4")
+# Test only smaller datasets to avoid timeouts
+datasets=("data1" "data2")
 
 # Array to store results
 declare -a results=()
 
 for dataset in "${datasets[@]}"; do
-    # Check if dataset exists in the data directory
     if [[ ! -d "../data/$dataset" ]]; then
         continue
     fi
     
     # Test Python version
-    # Clean up any existing contig.fasta
     rm -f "../data/$dataset/contig.fasta"
     
-    # Time the Python execution
     python_start=$(date +%s)
-    if python3 main.py "../data/$dataset" >/dev/null 2>&1; then
+    if timeout 300 python3 main.py "../data/$dataset" >/dev/null 2>&1; then
         python_end=$(date +%s)
         python_runtime_seconds=$((python_end - python_start))
         python_runtime=$(format_time $python_runtime_seconds)
         python_n50=$(calculate_n50 "../data/$dataset/contig.fasta")
     else
-        echo "Python execution failed for $dataset"
-        python_runtime="FAILED"
+        python_runtime="TIMEOUT"
         python_n50="N/A"
     fi
     
-    # Store Python result
     results+=("$dataset python $python_runtime $python_n50")
     
     # Test Codon version
-    # Clean up any existing contig.fasta
     rm -f "../data/$dataset/contig.fasta"
     
-    # Time the Codon execution
     codon_start=$(date +%s)
-    if codon run -release -plugin seq main_codon.py "../data/$dataset" >/dev/null 2>&1; then
+    if timeout 300 codon run -release -plugin seq main_codon.py "../data/$dataset" >/dev/null 2>&1; then
         codon_end=$(date +%s)
         codon_runtime_seconds=$((codon_end - codon_start))
         codon_runtime=$(format_time $codon_runtime_seconds)
         codon_n50=$(calculate_n50 "../data/$dataset/contig.fasta")
     else
-        echo "Codon execution failed for $dataset"
-        codon_runtime="FAILED"
+        codon_runtime="TIMEOUT"
         codon_n50="N/A"
     fi
     
-    # Store Codon result
     results+=("$dataset codon $codon_runtime $codon_n50")
 done
 

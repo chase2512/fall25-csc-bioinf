@@ -7,37 +7,38 @@ jobs:
       - run: echo "🎉 The job was automatically triggered by a ${{ github.event_name }} event."
       - run: echo "🐧 This job is now running on a ${{ runner.os }} server hosted by GitHub!"
       - run: echo "🔎 The name of your branch is ${{ github.ref }} and your repository is ${{ github.repository }}."
+      
+      - name: Check out repository code
+        uses: actions/checkout@v5
+        
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+          
+      - name: Install Python dependencies
+        run: |
+          pip install matplotlib find_libpython
+          
       - name: Install Codon
         run: |
           mkdir -p ${HOME}/.codon
           curl -L https://github.com/exaloop/codon/releases/download/v0.19.3/codon-linux-x86_64.tar.gz | tar zxvf - --strip-components=1 -C ${HOME}/.codon
           curl -L https://github.com/exaloop/seq/releases/download/v0.11.5/seq-linux-x86_64.tar.gz | tar zxvf - -C ${HOME}/.codon/lib/codon/plugins
-          export PATH=${PATH}:${HOME}/.codon/bin
-      - name: Check out repository code
-        uses: actions/checkout@v5
-      - uses: actions/setup-python@v6
-        with:
-          python-version: '3.13'
-      
-      - name: Install Python dependencies
-        run: |
-          pip install matplotlib find_libpython
-
-        
+          echo "${HOME}/.codon/bin" >> $GITHUB_PATH
+          
       - name: Set up Codon Python bridge
         run: |
-          pip install find_libpython
-          export CODON_PYTHON=$(find_libpython)
+          CODON_PYTHON=$(find_libpython)
           echo "Found Python at: ${CODON_PYTHON}"
+          echo "CODON_PYTHON=${CODON_PYTHON}" >> $GITHUB_ENV
+          
       - run: echo "💡 The ${{ github.repository }} repository has been cloned to the runner."
       - run: echo "🖥️ The workflow is now ready to test your code on the runner."
       
-      - name: Make evaluate.sh executable
-        run: chmod +x week1/evaluate.sh
-
-      - name: Set stack size
-        run: ulimit -s 8192000
-        
       - name: Week 1
-        run: bash week1/evaluate.sh
-        
+        run: |
+          # Set unlimited stack size and run the script in the same shell
+          ulimit -s unlimited
+          cd week1
+          chmod +x evaluate.sh
+          ./evaluate.sh
