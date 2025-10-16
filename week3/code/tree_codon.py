@@ -386,8 +386,9 @@ class Tree:
         temp_leaves: List[Optional[TreeNode]] = [None] * leaf_count
         
         for leaf in leaves_unsorted:
-            idx = leaf.index
-            if idx is None:
+            # Use _index directly instead of the property which returns Optional
+            idx = leaf._index
+            if idx == -1:
                 raise ValueError("Leaf node has no index")
             if idx >= leaf_count:
                 raise ValueError(f"Index {idx} is out of range for {leaf_count} leaves")
@@ -478,9 +479,9 @@ def _as_binary(node: TreeNode) -> TreeNode:
     Returns the converted node.
     """
     children = node.children
-    if children is None:
-        # Leaf node
-        return TreeNode(index=node.index)
+    if children is None or len(children) == 0:
+        # Leaf node - use _index directly (should never be -1 for a leaf)
+        return TreeNode(index=node._index)
     elif len(children) == 1:
         # Single child - skip this node
         child_binary = _as_binary(children[0])
