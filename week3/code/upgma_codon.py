@@ -54,7 +54,7 @@ def upgma(distances: np.ndarray) -> Tree:
     >>> print(tree.to_newick(include_distance=False))
     ((4,(3,2)),(1,0));
     """
-    MAX_FLOAT = float(np.finfo(np.float32).max)
+    MAX_FLOAT = np.finfo(np.float64).max
 
     if distances.shape[0] != distances.shape[1] or not np.allclose(distances.T, distances):
         raise ValueError("Distance matrix must be symmetric")
@@ -89,7 +89,7 @@ def upgma(distances: np.ndarray) -> Tree:
         node_heights.append(0.0)
 
     # Cluster indices
-    distances_v = distances.astype(np.float32, copy=True)
+    distances_v = distances.astype(np.float64, copy=True)
     
     # Exit loop via 'break'
     while True:

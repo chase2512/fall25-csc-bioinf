@@ -10,11 +10,33 @@ import copy
 from typing import List, Tuple, Optional
 
 
-class TreeError(Exception):
+class TreeError(Static[Exception]):
     """
     An exception that occurs in context of tree topology.
     """
     pass
+
+
+# Add hash support for set (Codon doesn't have frozenset)
+@extend
+class set:
+    def __hash__(self):
+        MAX = int.MAX
+        MASK = 2 * MAX + 1
+        n = len(self)
+        h = 1927868237 * (n + 1)
+        h &= MASK
+        for x in self:
+            hx = hash(x)
+            h ^= (hx ^ (hx << 16) ^ 89869747) * 3644798167
+            h &= MASK
+        h = h * 69069 + 907133923
+        h &= MASK
+        if h > MAX:
+            h -= MASK + 1
+        if h == -1:
+            h = 590923713
+        return h
 
 
 class TreeNode:
@@ -31,7 +53,7 @@ class TreeNode:
     _distance: float
     _is_root: bool
     _parent: Optional[TreeNode]
-    _children: Optional[Tuple[TreeNode, ...]]
+    _children: List[TreeNode]
 
     def __init__(self, children=None, distances=None, index: Optional[int] = None):
         self._is_root = False
@@ -48,7 +70,7 @@ class TreeNode:
                 raise ValueError("Number of children and distances must match")
             
             self._index = -1
-            self._children = tuple(children)
+            self._children = [i for i in children]
             
             for i in range(len(children)):
                 child = children[i]
@@ -62,7 +84,7 @@ class TreeNode:
                 raise ValueError("Leaf nodes cannot have children")
             
             self._index = index
-            self._children = None
+            self._children = []
     
     def _set_parent(self, parent: TreeNode, distance: float):
         if self._parent is not None or self._is_root:
@@ -89,8 +111,8 @@ class TreeNode:
         return None if self._index == -1 else self._index
     
     @property
-    def children(self) -> Optional[Tuple[TreeNode, ...]]:
-        return self._children
+    def children(self) -> Optional[List[TreeNode]]:
+        return None if len(self._children) == 0 else self._children
     
     @property
     def parent(self) -> Optional[TreeNode]:
@@ -104,7 +126,7 @@ class TreeNode:
         """
         Check if the node is a leaf node.
         """
-        return self._children is None
+        return len(self._children) == 0
     
     def is_root(self) -> bool:
         """
@@ -290,10 +312,10 @@ class TreeNode:
         if self._index != item._index:
             return False
         
-        if self._children is None and item._children is None:
+        if len(self._children) == 0 and len(item._children) == 0:
             return True
         
-        if self._children is None or item._children is None:
+        if len(self._children) == 0 or len(item._children) == 0:
             return False
         
         if len(self._children) != len(item._children):
@@ -309,7 +331,8 @@ class TreeNode:
         if self.is_leaf():
             return hash(self._index)
         else:
-            return hash(self._children)
+            # Use set instead of tuple for hashing
+            return hash(set(self._children))
 
 
 def _get_leaves(node: TreeNode, leaf_list: List[TreeNode]):

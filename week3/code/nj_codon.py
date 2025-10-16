@@ -57,7 +57,7 @@ def neighbor_joining(distances: np.ndarray) -> Tree:
     >>> print(tree.to_newick(include_distance=False))
     (3,(2,(1,0)),4);
     """
-    MAX_FLOAT = float(np.finfo(np.float32).max)
+    MAX_FLOAT = np.finfo(np.float64).max
 
     if distances.shape[0] != distances.shape[1] or not np.allclose(distances.T, distances):
         raise ValueError("Distance matrix must be symmetric")
@@ -90,9 +90,9 @@ def neighbor_joining(distances: np.ndarray) -> Tree:
         divergence_v.append(0.0)
     
     # Triangular matrix for storing the divergence corrected distances
-    corr_distances_v = np.zeros((distances.shape[0], distances.shape[0]), dtype=np.float32)
+    corr_distances_v = np.zeros((distances.shape[0], distances.shape[0]), dtype=np.float64)
     
-    distances_v = distances.astype(np.float32, copy=True)
+    distances_v = distances.astype(np.float64, copy=True)
 
     # Cluster indices
     # Exit loop via 'return'
