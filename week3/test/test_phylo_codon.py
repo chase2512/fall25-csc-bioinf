@@ -1,10 +1,8 @@
 import time
-from python import sys
-
-# Add the code directory to Python path (hardcoded relative path)
-sys.path.insert(0, '../code')
-
 import numpy as np
+from tree_codon import Tree, TreeNode
+from upgma_codon import upgma
+from nj_codon import neighbor_joining
 from tree_codon import Tree, TreeNode
 from upgma_codon import upgma
 from nj_codon import neighbor_joining
