@@ -42,6 +42,7 @@ class set:
 class TreeNode:
     _index: int
     _distance: float
+    _is_root: bool
     _parent: Optional[TreeNode]
     _children: List[TreeNode]
     
@@ -58,6 +59,7 @@ class TreeNode:
         
         self._distance = 0.0
         self._parent = None
+        self._is_root = False
         
         if distances is not None:
             if len(self._children) != len(distances):
