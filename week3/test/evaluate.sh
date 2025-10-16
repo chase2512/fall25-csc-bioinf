@@ -6,7 +6,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CODE_DIR="$(cd "${SCRIPT_DIR}/../code" && pwd)"
 
 # Set PYTHONPATH to include the code directory
-export PYTHONPATH="${CODE_DIR}:${PYTHONPATH}"
+export PYTHONPATH="${CODE_DIR}:${PYTHONPATH:-}"
 
 # Print header
 echo "Language    Runtime"
