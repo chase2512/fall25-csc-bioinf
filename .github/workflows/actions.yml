@@ -17,7 +17,7 @@ jobs:
           
       - name: Install Python dependencies
         run: |
-          pip install matplotlib find_libpython
+          pip install matplotlib find_libpython numpy biotite
           
       - name: Install Codon
         run: |
@@ -35,10 +35,18 @@ jobs:
       - run: echo "💡 The ${{ github.repository }} repository has been cloned to the runner."
       - run: echo "🖥️ The workflow is now ready to test your code on the runner."
       
-      - name: Week 1
+      #- name: Week 1
+      #  run: |
+      #    # Set unlimited stack size and run the script in the same shell
+      #    ulimit -s unlimited
+      #    cd week1
+      #    chmod +x evaluate.sh
+      #    ./evaluate.sh
+
+      - name: Week 3 - Phylo Tests
         run: |
-          # Set unlimited stack size and run the script in the same shell
-          ulimit -s unlimited
-          cd week1
+          cd week3/code
           chmod +x evaluate.sh
           ./evaluate.sh
+      
+      - run: echo "🍏 This job's status is ${{ job.status }}."

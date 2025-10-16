@@ -1,0 +1,2086 @@
+below is info for an assingment where i have to convert 4 python files from the repository https://github.com/biopython/biopython to be able to run with codon https://docs.exaloop.io/
+i will provide codon documentation to show you what you will need to change for each python file.
+i will also provide you with all the questions and awnsers on the class forum to help with any mistakes.
+
+
+codon notes:
+Usage
+The codon command includes several subcommands for compiling and executing code.
+
+codon run¶
+codon run will compile and execute the provided program:
+
+
+codon run file.py           # compile and run (defaults to debug mode)
+codon run -debug file.py    # compile and run in debug mode
+codon run -release file.py  # compile and run with optimizations
+If the file is given as -, then the program is read from standard input:
+
+
+echo 'print("hello")' | codon run -release -
+# hello
+Program arguments can be provided after the file, as in:
+
+
+codon run -release file.py arg1 arg2 arg3
+For example:
+
+
+echo 'import sys; print(sys.argv)' | codon run -release - arg1 arg2 arg3
+# ['-', 'arg1', 'arg2', 'arg3']
+codon build¶
+codon build will compile to a desired output type, be it an executable, object file, shared library, LLVM IR or Python extension. The -release and -debug flags also apply to codon build in the same way as described from codon run above.
+
+The optional -o <file> parameter can be used to specify the output file. If no output type is specified, the output type is determined from the file name provided to -o. If no output file name is specified, the output file name is derived from the input file name, in combination with the output type (e.g. compiling foo.py to an object file results in output file foo.o).
+
+Compile to executable¶
+The -exe flag can be used to generate an executable:
+
+
+# compile 'program.py' to executable 'program'
+codon build -exe program.py
+
+# compile 'program.py' to executable 'hello'
+codon build -exe -o hello program.py
+
+# compile 'program.py' to executable 'hello' with optimizations
+codon build -exe -o hello -release program.py
+
+# compile 'program.py' to executable 'hello' with optimizations
+# '-exe' is inferred from `-o` argument
+codon build -o hello -release program.py
+Codon uses a C++ compiler to link the actual executable after compilation. Extra linker flags can be passed with the -linker-flags argument. For example:
+
+
+# includes /foo/bar in the executable's rpath
+codon build -release -linker-flags '-Wl,-rpath,/foo/bar' program.py
+Multiple linker flags can be passed by separating them with a space in the argument to -linker-flags.
+
+Compile to shared library¶
+The -lib flag can be used to generate a shared library:
+
+
+# compile 'program.py' to shared library 'program.so'
+codon build -lib program.py
+
+# compile 'program.py' to shared library 'hello.so'
+codon build -lib -o hello.so program.py
+
+# compile 'program.py' to shared library 'hello.so' with optimizations
+codon build -lib -o hello.so -release program.py
+
+# compile 'program.py' to shared library 'hello.so' with optimizations
+# '-lib' is inferred from `-o` argument
+codon build -o hello.so -release program.py
+The -linker-flags flag described above also applies when compiling to a shared library.
+
+Info
+
+When compiling to a shared library, the program's main code will be included and executed when the library is loaded as a global constructor. This allows you to include any necessary initialization code in the main program. This behavior can be controlled via the -global-ctor=<yes|no|auto> flag, which enables e.g. global constructor creation when compiling to other output types like object files.
+
+Info
+
+If you intend to call a Codon-generated shared library from C or C++, be sure to mark relevant functions with @export to ensure they are made visible by the linker. Exported functions can be called as regular C functions (i.e. they follow the C ABI). Learn more →
+
+Compile to object file¶
+The -obj flag can be used to generate an object file:
+
+
+# compile 'program.py' to object file 'program.o'
+codon build -obj program.py
+
+# compile 'program.py' to object file 'hello.o'
+codon build -obj -o hello.o program.py
+
+# compile 'program.py' to object file 'hello.o' with optimizations
+codon build -obj -o hello.o -release program.py
+
+# compile 'program.py' to object file 'hello.o' with optimizations
+# '-obj' is inferred from `-o` argument
+codon build -o hello.o -release program.py
+Compile to assembly code¶
+The -asm flag can be used to generate assembly code:
+
+
+# compile 'program.py' to assembly file 'program.s'
+codon build -asm program.py
+
+# compile 'program.py' to assembly file 'hello.o'
+codon build -asm -o hello.s program.py
+
+# compile 'program.py' to assembly file 'hello.s' with optimizations
+codon build -asm -o hello.s -release program.py
+
+# compile 'program.py' to assembly file 'hello.s' with optimizations
+# '-asm' is inferred from `-o` argument
+codon build -o hello.s -release program.py
+Compile to LLVM IR¶
+The -llvm flag can be used to generate LLVM IR:
+
+
+# compile 'program.py' to LLVM IR file 'program.ll'
+codon build -llvm program.py
+
+# compile 'program.py' to LLVM IR file 'hello.ll'
+codon build -llvm -o hello.ll program.py
+
+# compile 'program.py' to LLVM IR file 'hello.ll' with optimizations
+codon build -llvm -o hello.ll -release program.py
+
+# compile 'program.py' to LLVM IR file 'hello.ll' with optimizations
+# '-llvm' is inferred from `-o` argument
+codon build -o hello.ll -release program.py
+Compile to Python extension¶
+The -pyext flag can be used to generate a Python extension:
+
+
+# compile 'program.py' to Python extension 'program.o'
+codon build -pyext program.py
+
+# compile 'program.py' to Python extension 'hello.o'
+codon build -pyext -o hello.o program.py
+
+# compile 'program.py' to Python extension 'hello.o' with optimizations
+codon build -pyext -o hello.o -release program.py
+
+# compile 'program.py' to Python extension 'hello.o' with module
+# name 'mymodule' and optimizations enabled
+codon build -pyext -o hello.o -release -module mymodule program.py
+Info
+
+When using -pyext, you will also often want to use the --relocation-model=pic flag to generate position-independent code.
+
+codon jit¶
+Codon provides a debugging interface for its JIT compilation capabilities through the codon jit subcommand. This subcommand uses the same JIT engine internally as used by Codon's Python JIT decorator and Jupyter kernel. However, it is intended to be used as a debugging utility rather than as a general usage mode.
+
+Warning
+
+codon jit is intended to be used as a debugging utility for Codon's JIT compilation capabilities. The interface may change between Codon versions.
+
+codon jit can be passed a file name to read from, or - to read from standard input. For example:
+
+
+echo 'print("hello world")' | codon jit -
+# >>> Codon JIT v0.19.0 <<<
+# hello world
+# [done]
+It can also be used as a REPL if no file is provided. JIT inputs can be separated with the string #%%.
+
+Using Codon in an existing Python codebase¶
+Codon provides a Python package called codon-jit that can be installed with pip. This package supports JIT compilation on a per-function basis within an existing Python codebase.
+
+Learn more in the Python JIT docs.
+
+Additional options¶
+Disabling exceptions¶
+By default, Codon does exception handling to match Python's semantics and behavior. If you know your program does not raise or catch exceptions, they can be disabled altogether with the -disable-exceptions flag.
+
+-disable-exceptions can lead to (sometimes substantial) performance improvements by enabling the compiler to deduce additional information about the semantics of the program. For example, if the compiler can deduce that there will be no index errors in a loop that iterates over an array, it can potentially use that information to perform vectorization or other optimizations.
+
+In some contexts, exceptions are disabled automatically by Codon, such as when compiling for GPU execution.
+
+Numerical semantics¶
+For performance reasons, certain numerical operations in Codon follow C semantics by default. For example, integer division rounds towards zero in Codon whereas it rounds down in Python:
+
+
+print((-3) // 2)
+# Codon: -1
+# Python: -2
+Similarly, floating-point division by zero returns inf in Codon whereas it raises an exception in Python:
+
+
+print(1.0 / 0.0)
+# Codon: inf
+# Python: 'ZeroDivisionError: float division by zero'
+The -numerics=<mode> flag can be used to control this behavior:
+
+-numerics=c (default): C semantics, as above
+-numerics=py: Python semantics, matching Python behavior at the cost of performance
+Fast-math¶
+Fast-math optimizations can be enabled with the -fast-math flag. Note that this flag makes various assumptions about nan and inf values, so it is best to use it with caution.
+
+Disabling optimization passes¶
+The -disable-opt <pass> flag can be used to disable specific optimization passes. For example:
+
+
+# compile & run with optimizations, but don't perform NumPy fusion optimization
+codon run -release -disable-opt core-numpy-fusion program.py
+Compile-time definitions¶
+Literal variables can be passed on the command-line via the -D flag. These variables are treated as compile-time constants and can be used for compile-time metaprogramming.
+
+For example, the following code:
+
+
+n = Int[N](42)
+print(n * n)
+can be executed with:
+
+
+codon run -DN=16 program.py
+to use a 16-bit integer as the type of variable n.
+
+Logging¶
+Codon can display logging information and also output intermediate compilation results via the -log <streams> command. The argument to -log can contain any of the following characters:
+
+t (time): Displays timings for various stages of the compilation process.
+T (typecheck): Enables logging during type checking
+i (IR): Enables logging during Codon IR passes
+l (dump): Dumps intermediate compilation results, including AST, Codon IR and LLVM IR
+
+
+Technical¶
+What is Codon?¶
+Codon is a high-performance Python compiler that compiles Python code to native machine code without any runtime overhead. Typical speedups over Python are on the order of 10-100x or more, on a single thread. Codon's performance is typically on par with that of C/C++. Unlike Python, Codon supports native multithreading, which can lead to speedups many times higher still. Codon is extensible via a plugin infrastructure, which lets you incorporate new libraries, compiler optimizations and even keywords.
+
+What isn't Codon?¶
+While Codon supports nearly all of Python's syntax, it is not a drop-in replacement, and large codebases might require modifications to be run through the Codon compiler. For example, some of Python's modules are not yet implemented within Codon, and a few of Python's dynamic features are disallowed. The Codon compiler produces detailed error messages to help identify and resolve any incompatibilities. Codon supports seamless Python interoperability to handle cases where specific Python libraries or dynamism are required, and also supports writing Python extension modules that can be imported and used from larger Python codebases.
+
+Why Codon?¶
+Python is arguably the world's most popular programming language, and is gradually becoming the lingua franca particularly amongst non-technical or non-CS practitioners in numerous fields. It provides a readable, clean syntax, is easy to learn, and has an unmatched ecosystem of libraries. However, Python's achilles heel has always been performance: a typical codebase in pure Python is orders of magnitude slower than its C/C++/Rust counterpart.
+
+Codon bridges the gap between Python's simplicity and ease-of-use, and the performance of low-level languages like C++ or Rust, by using novel compiler and type checking techniques to statically compile code ahead-of-time, avoiding all of vanilla Python's runtime overhead and performance drawbacks.
+
+How does Codon compare to...¶
+CPython? Codon tries to follow CPython's syntax, semantics and APIs as closely as possible, aside from a few cases where Codon differs from CPython for performance reasons (one example being Codon's 64-bit int vs. CPython's arbitrary- width int). Performance-wise, speedups over CPython are usually on the order of 10-100x.
+
+Numba? While Codon does offer a JIT decorator similar to Numba's, Codon is in general an ahead-of-time compiler that compiles end-to-end programs to native code. It also supports compilation of a much broader set of Python constructs and libraries.
+
+PyPy? PyPy strives to effectively be a drop-in replacement for CPython, whereas Codon differs in a few places in order to eliminate any dynamic runtime or virtual machine, and thereby attain much better performance.
+
+Cython? Like Cython, Codon has a Python-extension build mode that compiles to Python extension modules, allowing Codon-compiled code to be imported and called from plain Python.
+
+C++? Codon often generates the same code as an equivalent C or C++ program. Codon can sometimes generate better code than C/C++ compilers for a variety of reasons, such as better container implementations, the fact that Codon does not use object files and inlines all library code, or Codon-specific compiler optimizations that are not performed with C or C++.
+
+Julia? Codon's compilation process is actually much closer to C++ than to Julia. Julia is a dynamically-typed language that performs type inference as an optimization, whereas Codon type checks the entire program ahead of time. Codon also tries to circumvent the learning curve of a new language by adopting Python's syntax and semantics.
+
+Mojo? Mojo strives to add low-level programming support/features to the Python language, while also supporting the rest of Python by relying on CPython. By contrast, Codon aims to make Python itself more performant by using new type checking and compilation techniques, without trying to be a superset or drop-in replacement. Codon tries to minimize new syntax and language features with respect to Python.
+
+You can see results from Codon's benchmark suite suite at exaloop.io/#benchmarks. More benchmarks can be found in the 2019 paper on bioinformatics-specific use cases (note that the name used in that paper is that of Codon's predecessor, "Seq").
+
+I want to use Codon, but I have a large Python codebase I don't want to port.¶
+You can use Codon on a per-function basis via the @codon.jit decorator, which can be used within Python codebases. This will compile only the annotated functions and automatically handle data conversions to and from Codon. It also allows for the use of any Codon-specific modules or extensions, such as multithreading.
+
+Codon can also compile to Python extension modules that can be imported and used from Python.
+
+What about interoperability with other languages and frameworks?¶
+Interoperability is and will continue to be a priority for Codon. We don't want using Codon to render you unable to use all the other great frameworks and libraries that exist. Codon supports full interoperability with Python and C/C++.
+
+Does Codon use garbage collection?¶
+Yes, Codon uses the Boehm garbage collector.
+
+Codon doesn't support Python module X or function Y.¶
+While Codon covers a sizeable subset of Python's standard library, it does not yet cover every function from every module. Note that missing functions can still be called through Python via from python import. Many of the functions that lack Codon-native implementations (e.g. I/O or OS related functions) will generally also not see substantial speedups from Codon.
+
+Codon is no faster than Python for my application.¶
+Applications that spend most of their time in C-implemented library code generally do not see substantial performance improvements in Codon. Similarly, applications that are I/O or network-bound will have the same bottlenecks in Codon.
+
+Codon is slower than Python for my application.¶
+Please report any cases where Codon is noticeably slower than Python as bugs on our issue tracker.
+
+Usage¶
+Is Codon free and open source?¶
+Yes, Codon is free and open source under the Apache License, Version 2.0. Exaloop offers enterprise and custom solutions on top of Codon for a variety of applications, use cases and industries; please email info@exaloop.io to learn more.
+
+Contributing¶
+Does Codon accept outside contributions?¶
+Absolutely, we'd be delighted to accept any contributions in the form of issues, bug reports, feature requests or pull requests.
+
+I want to contribute. Where do I start?¶
+If you have a specific feature or use case in mind, here is a quick breakdown of the codebase to help provide a sense of where to look first:
+
+codon/: compiler code
+codon/parser/: parser and type checker code: this is the first step of compilation
+codon/cir/: Codon IR and optimizations: the second step of compilation
+codon/cir/llvm/: conversion from Codon IR to LLVM IR and machine code: the last step of compilation
+codon/runtime/: runtime library: used during execution
+stdlib/: standard library code
+You can also take a look at some of the open issues. If you have any question or suggestions, please feel free to ask in the forum.
+
+Is there a Contributor License Agreement (CLA)?¶
+Yes, there is a CLA that is required to be agreed to before any pull requests are merged. Please see exaloop.io/legal/cla for more information. To agree to the CLA, send an email with your GitHub username to info@exaloop.io.
+
+Overview
+Codon strives to be as close to Python (specifically, CPython) as possible, outside of a few differences that stem from performance considerations or incompatibilities with Codon's static compilation paradigm.
+
+As a result, if you know Python, you already know 99% of Codon!
+
+Codon also introduces several new elements to Python to facilitate low-level programming, parallel programming and compile-time metaprogramming, among other features. These elements are described in this section.
+
+Differences with Python¶
+Tip
+
+Found something that works differently in Codon than Python which isn't mentioned below? Let us know on GitHub.
+
+While Codon's syntax and semantics are nearly identical to Python's, there are some notable differences that are worth considering. Most of these design decisions were made with the trade-off between performance and Python compatibility in mind.
+
+Please see our roadmap for more information about how we plan to close some of these gaps in the future.
+
+Data types¶
+Integers: Codon's int is a 64-bit signed integer, whereas Python's (after version 3) can be arbitrarily large. However Codon does support larger integers via Int[N] where N is the bit width.
+
+Strings: Codon currently uses ASCII strings unlike Python's unicode strings. Unicode strings are planned for Codon 1.0.
+
+Dictionaries: Codon's dictionary type does not preserve insertion order, unlike Python's as of 3.6.
+
+Tuples: Since tuples compile down to structs, tuple lengths must be known at compile time, meaning you can't convert an arbitrarily-sized list to a tuple, for instance.
+
+Arrays: Codon includes a native NumPy implementation with a corresponding ndarray type. Codon's ndarray is parameterized by the data type (dtype) and dimension (ndim). In practice, this almost never affects NumPy code as these parameters are determined automatically at compile time. In some cases, such as when reading array data from disk, they must be provided programmatically. Learn more in the Codon-NumPy docs.
+
+Type checking¶
+Since Codon performs static type checking ahead of time, a few of Python's dynamic features are disallowed. For example, monkey patching classes at runtime (although Codon supports a form of this at compile time) or adding objects of different types to a collection.
+
+These few restrictions are ultimately what allow Codon to compile to native code without any runtime performance overhead. Future versions of Codon will lift some of these restrictions by the introduction of e.g. implicit union types.
+
+Numerics¶
+For performance reasons, some numeric operations use C semantics rather than Python semantics. This includes, for example, raising an exception when dividing by zero, or other checks done by math functions. Strict adherence to Python semantics can be enforced by using the -numerics=py flag of the codon CLI. Note that this does not change ints from 64-bit.
+
+Modules¶
+While most of the commonly used builtin modules have Codon-native implementations, a few are not yet implemented. However these can still be used within Codon via from python import.
+
+Classes
+Codon supports Python classes as you would expect. For example:
+
+
+class Point:
+    def __init__(self, x, y):
+        self.x = x
+        self.y = y
+
+    def __str__(self):
+        return f'({self.x}, {self.y})'
+
+p = Point(3, 4)
+print(p)  # (3, 4)
+Codon will automatically infer class fields if none are specified explicitly. Alternatively, the class fields can be specified in the class body:
+
+
+class Point:
+    x: int
+    y: int
+
+    def __init__(self, x, y):
+        self.x = x
+        self.y = y
+
+    def __str__(self):
+        return f'({self.x}, {self.y})'
+Class fields can reference the enclosing class through the Optional type:
+
+
+class Point:
+    x: int
+    y: int
+    other: Optional[Point]
+
+    def __init__(self, x, y, other: Optional[Point] = None):
+        self.x = x
+        self.y = y
+        self.other = other
+
+    def __str__(self):
+        if self.other is None:
+            return f'({self.x}, {self.y})'
+        else:
+            return f'({self.x}, {self.y}) -> {str(self.other)}'
+
+p = Point(3, 4)
+print(p)  # (3, 4)
+
+q = Point(5, 6, p)
+print(q)  # (5, 6) -> (3, 4)
+Overloading methods¶
+In Python, class methods can be defined to take arguments of arbitrary types, and to reason about them through functions like isinstance(). While the same works in Codon, Codon also offers another way to separate out method logic for different input types: method overloading.
+
+Multiple methods with the same name but different arguments or argument types can be defined in the same class. Codon will use the method corresponding to the argument types provided in a given call of that method. For example:
+
+
+class Point:
+    ...
+
+    def foo(self, n: int):
+        print('int-foo called!', n)
+
+    def foo(self, s: str):
+        print('str-foo called!', s)
+
+p = Point(3, 4)
+p.foo(42)     # int-foo called! 42
+p.foo('abc')  # str-foo called! abc
+Method resolution occurs bottom-up, meaning if multiple methods are applicable for a given set of arguments, the latest one will be used.
+
+Note
+
+Non-method functions can also be overloaded in Codon by adding the @overload decorator, which prevents latter definitions from shadowing previous ones.
+
+Tuple classes¶
+Regular classes are mutable and passed around by reference. Internally, class data is dynamically allocated and a pointer to the allocated data is used to represent the class instance.
+
+Codon supports an alternative type of class that is immutable and avoids heap allocation: tuple classes. A tuple class is defined via the @tuple class annotation. For example, we can rewrite the Point class above as a tuple class:
+
+
+@tuple
+class Point:
+    x: int
+    y: int
+
+    def __str__(self):
+        return f'({self.x}, {self.y})'
+Because tuple class instances are immutable, tuple classes do not use the usual __init__ method, and can instead define new constructors via the __new__ method. A default __new__ which takes all of the tuple class's fields as arguments is automatically generated. We can define additional __new__ methods as follows, for instance:
+
+
+@tuple
+class Point:
+    x: int
+    y: int
+
+    # constructor (A)
+    def __new__():
+        return Point(0, 0)
+
+    # constructor (B)
+    def __new__(x: int):
+        return Point(x, 0)
+
+    def __str__(self):
+        return f'({self.x}, {self.y})'
+
+zero = Point()  # calls constructor (A)
+one = Point(1)  # calls constructor (B)
+
+print(zero)  # (0, 0)
+print(one)   # (1, 0)
+
+zero.x = 1  # error: cannot modify tuple attributes
+Tuple classes can be more efficient than standard classes, particularly when storing many instances in an array or list.
+
+Internally, tuple classes correspond to C structs. For example, the Point tuple class above would correspond exactly to the following struct definition in C:
+
+
+struct Point {
+  int64_t x;
+  int64_t y;
+};
+As a result, tuple classes can also be used when interoperating with a C API, as they can mirror API-specific data structures or layouts.
+
+Inheritance¶
+Codon supports Python's inheritance and dynamic polymorphism. For example:
+
+
+class Shape:
+
+    def area(self):
+        return 0.0
+
+    def describe(self):
+        return "This is a shape."
+
+class Circle(Shape):
+    radius: float
+
+    def __init__(self, radius):
+        self.radius = radius
+
+    def area(self):
+        return 3.1416 * self.radius**2
+
+    def describe(self):
+        return f"A circle with radius {self.radius}"
+
+class Rectangle(Shape):
+    width: float
+    height: float
+
+    def __init__(self, width, height):
+        self.width = width
+        self.height = height
+
+    def area(self):
+        return self.width * self.height
+
+    def describe(self):
+        return f"A rectangle with width {self.width} and height {self.height}"
+
+class Square(Rectangle):
+
+    def __init__(self, width):
+        super().__init__(width, width)
+
+    def describe(self):
+        return super().describe().replace('rectangle', 'square')
+
+
+shapes: list[Shape] = []
+shapes.append(Circle(5))
+shapes.append(Rectangle(4, 6))
+shapes.append(Square(3))
+
+for shape in shapes:
+    print(shape.describe(), f'(area={shape.area()})')
+Warning
+
+Tuple classes cannot be subclassed using standard inheritance. However, they can be subclassed via static inheritance, as described below.
+
+In the code above, the methods area() and describe() are overriden by the subclasses of Square. Codon follows Python's semantics and method resolution order.
+
+Static inheritance¶
+In addition to Python's dynamic inheritance, Codon supports static inheritance (or early binding), which can be expressed via the special Static type:
+
+
+class Foo:
+    x: int
+
+    def __init__(self, x: int):
+        self.x = x
+
+    def hello(self):
+        print('Foo')
+
+class Bar(Static[Foo]):
+
+    def hello(self):
+        print('Bar')
+
+foo = Foo(1)
+bar = Bar(2)
+
+print(foo.x, bar.x)  # 1 2
+foo.hello()          # Foo
+bar.hello()          # Bar
+The hello() method calls are resolved at compile time instead of at runtime, as would be the case with standard, dynamic inheritance. Static inheritance is useful when you want to reuse a particular class's functionality without paying the cost of dynamic dispatch that is incurred with dynamic inheritance.
+
+Static inheritance also works on tuple classes:
+
+
+@tuple
+class Foo:
+    x: int
+
+    def hello(self):
+        print('Foo')
+
+@tuple
+class Bar(Static[Foo]):
+
+    def hello(self):
+        print('Bar')
+
+foo = Foo(1)
+bar = Bar(2)
+
+print(foo.x, bar.x)  # 1 2
+foo.hello()          # Foo
+bar.hello()          # Bar
+Exceptions¶
+Subclasses of exception classes like Exception, ValueError, etc. must use static inheritance in order to be thrown and caught. Furthermore, when calling their parent class's constructor, exception subclasses must supply their type name as the first argument. Here is an example:
+
+
+class MyException(Static[Exception]):
+    x: int
+
+    def __init__(self, x: int):
+        super().__init__('MyException', 'my exception message')
+        self.x = x
+
+try:
+    raise MyException(42)
+except MyException as e:
+    print('caught:', str(e), e.x)  # caught: my exception message 42
+
+Generics
+Codon's type system is designed to be non-intrusive, meaning it will infer types as much as possible without manual type annotations. This way, Python programs typically "just work" without requiring code changes.
+
+Occasionally, it can be helpful to use Codon's type system to express more intricate type relationships. This can be achieved through generics.
+
+Generic functions¶
+Imagine we want to enforce that a particular function should only accept a list argument; we can achieve that using generic types:
+
+
+def foo[T](x: list[T]):  # 'T' is a generic type parameter
+    print(max(x))
+
+foo([20, 42, 12])        # 42
+foo(['hello', 'world'])  # world
+foo(100)                 # error: 'int' does not match expected type 'List[T]'
+Info
+
+This syntax is supported by Python 3.12 and up. See PEP 695.
+
+In this code, T is a generic type parameter that gets realized based on the argument type:
+
+foo([20, 42, 12]) → the argument is a list of integers, so T is realized as int.
+foo(['hello', 'world']) → the argument is a list of strings, so T is realized as str.
+foo(100) → the argument is not a list at all, so a type checking error occurs.
+Alternatively, Codon allows the generic type parameter to be specified as an argument:
+
+
+def foo(x: list[T], T: type):
+    print(max(x))
+
+foo([20, 42, 12], int)    # can specify 'T' explicitly...
+foo([20, 42, 12], T=int)  # ... or by name
+foo([20, 42, 12])         # still works; 'T' inferred
+This syntax is useful for allowing generic type parameters to be specified explicitly as arguments when the function is called, or for providing default values for them:
+
+
+def bar(x: list[T], T: type = int):
+    print(type(x))
+
+bar([])  # <class 'List[int]'>
+Generic classes¶
+Classes can also be generic:
+
+
+class A[T]:  # 'T' is a generic type parameter
+    x: T
+
+    def __init__(self, x: T):
+        self.x = x
+
+    def __repr__(self):
+        return f'A({self.x})'
+
+x = A(42)            # 'T' inferred
+y = A[str]('hello')  # 'T' explicitly given as 'str'
+
+print(x)  # A(42)
+print(y)  # A(hello)
+Generic type parameters can also be listed after the class fields:
+
+
+class A:  # identical to above definition
+    x: T
+    T: type
+
+    def __init__(self, x: T):
+        self.x = x
+
+
+Metaprogramming
+Literals¶
+Codon supports compile-time metaprogramming through the special Literal type. Literals represent constants which can be operated on and manipulated at compile time. There are three types of Literals:
+
+Literal[int]: integer constant
+Literal[str]: string constant
+Literal[bool]: boolean constant
+Integer literals¶
+Integer literals can be defined explicitly as follows:
+
+
+n: Literal[int] = 42
+Literals must be known at compile time. For example, the following code will cause a compilation error:
+
+
+from sys import argv
+n: Literal[int] = len(argv)  # error: value is not literal!
+Arithmetic operations on integer literals result in other integer literals:
+
+
+n: Literal[int] = 42
+m: Literal[int] = n + 1  # valid int literal
+Conditional expressions on literals also result in other literals:
+
+
+n: Literal[int] = 42
+m: Literal[int] = n//2 if n%2 == 0 else 3*n + 1
+Integer literals can be passed as function arguments, and also returned from functions:
+
+
+def fib(n: Literal[int]) -> Literal[int]:
+    return 1 if n < 2 else fib(n - 1) + fib(n - 2)
+
+n: Literal[int] = fib(10)  # computed entirely at compile time!
+String literals¶
+Much like integer literals, string literals represent constant strings:
+
+
+s: Literal[str] = 'hello'
+Whereas integer literals can be manipulated via arithmetic operations to produce other integer literals, string literals can be manipulated via string operations to produce new string literals:
+
+
+t: Literal[str] = s[1]   # 'e'
+u: Literal[str] = s[3:]  # 'lo'
+Much like integer literals, string literals can similarly be used in literal conditional expressions and as function argument or return types.
+
+Boolean literals¶
+Finally, boolean literals represent constant booleans:
+
+
+b: Literal[bool] = True
+Boolean operators can be used on boolean literals to produce new boolean literals:
+
+
+b: Literal[bool] = True
+d: Literal[bool] = not b  # False
+Some operations on integer and string literals produce boolean literals:
+
+
+n: Literal[int] = 42
+s: Literal[str] = 'hello'
+
+b: Literal[bool] = (n < 10)          # False
+d: Literal[bool] = (s[2:4] == 'll')  # True
+Static loops¶
+It is also possible to express loops where the loop index is a literal integer, via the codon.static module:
+
+
+import codon.static
+
+for i in static.range(10):
+    m: Literal[int] = 3*i + 1
+    print(m)
+Static loops are unrolled at compile time, which allows the loop index to take on literal values.
+
+Static loops can also be used to create tuples, the lengths of which must be compile-time constants in Codon:
+
+
+import codon.static
+t = tuple(i*i for i in static.range(5))
+print(t)  # (0, 1, 4, 9, 16)
+You can loop over another tuple by obtaining its length as an integer literal via static.len():
+
+
+import codon.static
+
+t = tuple(i*i for i in static.range(5))
+u = tuple(t[i] + 1 for i in static.range(static.len(t)))
+
+print(u)  # (1, 2, 5, 10, 17)
+Static evaluation¶
+Literal expressions can be used as conditions in if statements, which enables the compiler to eliminate branches that it knows wil not be entered at runtime. This can be used to avoid type checking errors, for example:
+
+
+def foo(x):
+    if isinstance(x, int):
+        return x + 1
+    elif isinstance(x, str):
+        return x + '!'
+    else:
+        return x
+
+print(foo(42))       # 43
+print(foo('hello'))  # hello!
+print(foo(3.14))     # 3.14
+Normally, Codon's type checker would flag an expression like x + 1 as an error if the type of x is str. However, in the code above, the branches that are not applicable to the type of x are eliminated so as to allow the code to type check and compile.
+
+Here is another, more involved example:
+
+
+def flatten(x):
+    if isinstance(x, list):
+        for a in x:
+            flatten(a)
+    else:
+        print(x)
+
+flatten([[1,2,3], [], [4, 5], [6]])  # 1, 2, ..., 6
+Standard static typing on this program would be problematic since, if x is an int, it would not be iterable and hence would produce an error on for a in x. Static evaluation solves this problem by evaluating isinstance(x, list) at compile time and avoiding type checking the block containing the loop when x is not a list.
+
+Static evaluation works with literal expressions, isinstance(), hasattr() and type comparisons like type1 is type2.
+
+
+Low-Level Programming
+Codon provides various low-level programming features that can be used in performance-sensitive settings or when interfacing with external APIs.
+
+Integer types¶
+While Codon's standard int type is a 64-bit signed integer, different integer types are made available through the Int and UInt types:
+
+Int[N]: Signed integer with N bits
+UInt[N]: Unsigned integer with N bits
+For example:
+
+
+a = Int[16](42)    # signed 16-bit integer 42
+b = UInt[128](99)  # unsigned 128-bit integer 99
+The Codon standard library provides shorthands for the common variants:
+
+i8/u8: signed/unsigned 8-bit integer
+i16/u16: signed/unsigned 16-bit integer
+i32/u32: signed/unsigned 32-bit integer
+i64/u64: signed/unsigned 64-bit integer
+You can cast between different integer types freely:
+
+
+a = 42
+b = i16(a)
+c = u32(b)
+Similarly, you can perform arithmetic operations on integers of the same types:
+
+
+x = i32(10)
+y = i32(20)
+print(x + y)  # 30
+Floating-point types¶
+Codon's standard float type represents a 64-bit floating-point value (IEEE 754 binary64). Codon supports several alternative floating-point types:
+
+float32: 32-bit floating-point value (IEEE 754 binary32)
+float16: 16-bit floating-point value (IEEE 754 binary16)
+float128: 128-bit floating-point value (IEEE 754 binary128)
+bfloat16: 16-bit "brain" floating-point value (7-bit significand). Provides the same number of exponent bits as float, so that it matches its dynamic range, but with greatly reduced precision.
+Each of these float types can be constructed from a standard float:
+
+
+x = float32(3.14)
+y = float128(-1.0)
+z = bfloat16(0.5)
+They all also support the usual arithmetic operators:
+
+
+x = bfloat16(2) ** bfloat16(0.5)
+print(x)  # 1.41406
+Pointers¶
+Codon supports raw pointers natively via the Ptr type, which is parameterized by the type of the object being pointed to (i.e. Ptr[int] is an int pointer, Ptr[float] is a float pointer, and so on).
+
+Danger
+
+Pointer operations are not bounds-checked, meaning dereferencing an invalid pointer can cause a segmentation fault.
+
+Buffers of a specific type can be dynamically allocated by constructing a Ptr type with an integer argument, representing the number of elements of the given type to allocate:
+
+
+buffer = Ptr[int](10)  # equivalent to 'malloc(10 * sizeof(int64_t))' in C
+Pointers can be dereferenced and indexed:
+
+
+buffer = Ptr[int](10)
+buffer[0] = 10  # equivalent to '(*buffer) = 10' in C
+buffer[5] = 42  # equivalent to 'buffer[5] = 42' in C
+print(buffer[0])  # 10
+print(buffer[5])  # 42
+Constructing a pointer without any arguments results in a null pointer:
+
+
+null = Ptr[int]()  # equivalent to 'NULL' in C or 'nullptr' in C++
+You can cast between different pointer types:
+
+
+x = Ptr[float](1)
+x[0] = 3.14
+
+y = Ptr[int](x)  # treat 'x' as an integer pointer
+print(y[0])      # 4614253070214989087 - same bits as '3.14' float
+Pointers support various arithmetic and comparison operators:
+
+
+p = Ptr[int](1)
+q = p + 1  # equivalent to '&p[1]' in C
+
+print(p == q)  # False
+print(q - p)   # 1
+print(p < q)   # True
+Pointers to variables¶
+It is possible to obtain a pointer to a variable via the __ptr__ intrinsic function:
+
+
+x = 42
+p = __ptr__(x)  # 'p' is a 'Ptr[int]'; equivalent to '&x' in C
+p[0] = 99
+print(x)  # 99
+Pointers to variables can be useful when interfacing with C APIs. For example, consider the C standard library function frexp() which stores one of its outputs in an argument pointer. We can call this function from Codon as follows:
+
+
+from C import frexp(float, Ptr[i32]) -> float
+
+x = 16.4
+exponent = i32()
+mantissa = frexp(x, __ptr__(exponent))  # equivalent to 'frexp(x, &exponent)' in C
+
+print(mantissa, exponent)  # 0.5125 5
+Refer to C/C++ integration for more information about calling C/C++ functions from Codon.
+
+Pointers to fields¶
+__ptr__ can also be used to obtain pointers to fields of tuple classes:
+
+
+@tuple
+class Point:
+    x: int
+    y: int
+
+r = Point(3, 4)
+p = __ptr__(r.y)  # 'p' is a 'Ptr[int]'; equivalent to '&r.x' in C
+p[0] = 99
+print(r.x, r.y)  # 3 99
+Recall that tuple class instances are immutable and passed by value, so assignments create new instances:
+
+
+@tuple
+class Point:
+    x: int
+    y: int
+
+r = Point(3, 4)
+s = r  # creates a copy of 'r'
+p = __ptr__(r.y)
+p[0] = 99
+
+print(s.x, s.y)  # 3 4 (not changed by pointer modification)
+Software prefetching¶
+Pointers have several methods to facilitate software prefetching. These methods all have the form __prefetch_[rw][0123]__, where [rw] indicates whether the prefetch is made for a "read" (r) or a "write" (w), and the [0123] is a temporal locality specifier, with higher values indicating more locality (i.e. that the value should be kept in cache).
+
+For example:
+
+
+p = Ptr[int](1)
+p.__prefetch_w3__()  # prefetch for write, high temporal locality
+Refer to LLVM's prefetch intrinsic for additional information.
+
+Warning
+
+Not all targets support software prefetching. Consult the relevant documentation for your instruction set architecture for more information.
+
+Static arrays¶
+Arrays can be allocated on the stack via the __array__ intrinsic function:
+
+
+def f():
+    arr = __array__[int](10)  # array of 10 integers; equivalent to 'int64_t arr[10]' in C
+    arr[0] = 42
+    print(arr[0])  # 42
+Arrays created with __array__ have two fields: ptr (pointer to array data) and len (length of array). The argument of __array__ must be a literal integer.
+
+
+
+Inline LLVM IR
+Codon supports inline LLVM IR via the @llvm annotation:
+
+
+@llvm
+def llvm_add(a: int, b: int) -> int:
+    %res = add i64 %a, %b
+    ret i64 %res
+
+print(llvm_add(3, 4))  # 7
+Note that LLVM functions must explicitly specify argument and return types.
+
+LLVM functions can also be generic, and a format specifier in the body will be replaced by the appropriate LLVM type:
+
+
+@llvm
+def llvm_add[T](a: T, b: T) -> T:
+    %res = add {=T} %a, %b
+    ret {=T} %res
+
+print(llvm_add(3, 4))          # 7
+print(llvm_add(i8(5), i8(6)))  # 11
+LLVM intrinsics can be accessed with declare:
+
+
+@llvm
+def popcnt(n: int) -> int:
+    declare i64 @llvm.ctpop.i64(i64)
+    %0 = call i64 @llvm.ctpop.i64(i64 %n)
+    ret i64 %0
+
+print(popcnt(42))  # 3
+Annotations¶
+Sometimes it can be helpful to annotate @llvm functions to give the compiler more information as to how they behave. Codon has a number of default annotations for LLVM functions (all of which also apply to external/C functions):
+
+@pure: Function does not capture arguments (aside from return value capturing as in def foo(x): return x), does not modify arguments, and has no side effects. This is a mathematically "pure" function.
+
+@no_side_effect: Very similar to @pure but function may return different results on different calls, such as the C function time().
+
+@nocapture: Function does not capture any of its arguments (again excluding return value capturing).
+
+@self_captures: Function's first (self) argument captures the other arguments, an example being List.__setitem__().
+
+These are mutually-exclusive annotations. Another complementary annotation can be used to indicate that the return value of the function captures its arguments:
+
+@derives: Return value of the function captures its arguments.
+These annotations are optional and do not affect program semantics.
+
+
+Standard Library
+Codon implements much of Python's standard library natively. Some built-in modules and some methods of certain modules are not yet available natively in Codon; these can still be called through Python, however:
+
+
+import sys              # uses Codon's native 'sys' module
+from python import sys  # uses Python's 'sys' module
+Built-in modules¶
+The following built-in modules are supported either in full or in part natively in Codon:
+
+Module	Notes
+copy	
+gzip	
+random	Matches CPython's random outputs for same seed.
+threading	Locks work with Codon's parallel programming features.
+bisect	
+datetime	timedelta are represented in microseconds. Time zones not supported.
+heapq	
+operator	
+re	Uses Google's RE2 library internally.
+time	
+bz2	
+os	
+cmath	
+functools	
+itertools	
+statistics	
+typing	Contents are available by default in Codon.
+getopt	
+math	
+pickle	Codon uses its own pickle format, so generally not compatible with CPython pickling.
+string	
+collections	
+sys	
+Additional modules¶
+Alongside the standard modules above, Codon provides several additional modules that support various Codon-specific features.
+
+openmp: Contains OpenMP API, which can be used when writing multithreaded programs. See multithreading for more information.
+gpu: Contains GPU API (e.g. CUDA intrinsics), which can be used when writing GPU code. See GPU for more information.
+python: Contains internal machinery for interfacing with CPython. Most users will not need to interact with this module directly.
+experimental: Contains experimental features that are available for use, but might not be stable nor complete.
+
+NumPy
+Codon ships with a feature-complete, fully-compiled native NumPy implementation. It uses the same API as NumPy, but re-implements everything in Codon itself, allowing for a range of optimizations and performance improvements. Codon-NumPy works with Codon's Python interoperability (you can transfer arrays to and from regular Python seamlessly), parallel backend (you can do array operations in parallel), and GPU backend (you can transfer arrays to and from the GPU seamlessly, and operate on them on the GPU).
+
+Getting started¶
+Importing numpy in Codon will use Codon-NumPy (as opposed to from python import numpy, which would use standard NumPy):
+
+
+import numpy as np
+We can then create and manipulate arrays just like in standard NumPy:
+
+
+x = np.arange(15, dtype=np.int64).reshape(3, 5)
+print(x)
+#   0   1   2   3   4
+#   5   6   7   8   9
+#  10  11  12  13  14
+
+x[1:, ::2] = -99
+#   0   1   2   3   4
+# -99   6 -99   8 -99
+# -99  11 -99  13 -99
+
+y = x.max(axis=1)
+print(y)
+#   4   8  13
+In Codon-NumPy, any Codon type can be used as the array type. The numpy module has the same aliases that regular NumPy has, like np.int64, np.float32 etc., but these simply refer to the regular Codon types.
+
+Warning
+
+Using a string (e.g. "i4" or "f8") for the dtype is not yet supported.
+
+Codon array type¶
+The Codon array type is parameterized by the array data type ("dtype") and the array dimension ("ndim"). That means that, in Codon-NumPy, the array dimension is a property of the type, so a 1-d array is a different type than a 2-d array and so on:
+
+
+import numpy as np
+
+arr = np.array([[1.1, 2.2], [3.3, 4.4]])
+print(arr.__class__.__name__)  # ndarray[float,2]
+
+arr = np.arange(10)
+print(arr.__class__.__name__)  # ndarray[int,1]
+The array dimension must also be known at compile-time. This allows the compiler to perform a wider range of optimizations on array operations. Usually, this has no impact on the code as the NumPy functions can determine input and output dimensions automatically. However, the dimension (and dtype) must be given when, for instance, reading arrays from disk:
+
+
+# 'dtype' argument specifies array type
+# 'ndim' argument specifies array dimension
+arr = np.load('arr.npy', dtype=float, ndim=3)
+A very limited number of NumPy functions return an array whose dimension cannot be deduced from its inputs. One such example is squeeze(), which removes axes of length 1; since the number of axes of length 1 is not determinable at compile-time, this function requires an extra argument that indicates which axes to remove.
+
+Python interoperability¶
+Codon's ndarray type supports Codon's standard Python interoperability API (i.e. __to_py__ and __from_py__ methods), so arrays can be transferred to and from Python seamlessly.
+
+PyTorch integration¶
+Because PyTorch tensors and NumPy arrays are interchangeable without copying data, it is easy to use Codon to efficiently manipulate or operate on PyTorch tensors. This can be achieved either via Codon's just-in-time (JIT) compilation mode or via its Python extension mode.
+
+Using Codon JIT¶
+Here is an example showing initializing a 
+ tensor 
+ such that 
+:
+
+
+import numpy as np
+import time
+import codon
+import torch
+
+@codon.jit
+def initialize(arr):
+    for i in range(128):
+        for j in range(128):
+            for k in range(128):
+                arr[i, j, k] = i + j + k
+
+# first call JIT-compiles; subsequent calls use cached JIT'd code
+tensor = torch.empty(128, 128, 128)
+initialize(tensor.numpy())
+
+tensor = torch.empty(128, 128, 128)
+t0 = time.time()
+initialize(tensor.numpy())
+t1 = time.time()
+
+print(tensor)
+print(t1 - t0, 'seconds')
+Timings on an M1 MacBook Pro:
+
+Without @codon.jit: 0.1645 seconds
+With @codon.jit: 0.001485 seconds (110x speedup)
+For more information, see the Codon JIT docs.
+
+Using Codon Python extensions¶
+Codon can compile directly to a Python extension module, similar to writing a C extension for CPython or using Cython.
+
+Taking the same example, we can create a file init.py:
+
+
+import numpy as np
+import numpy.pybridge
+
+def initialize(arr: np.ndarray[np.float32, 3]):
+    for i in range(128):
+        for j in range(128):
+            for k in range(128):
+                arr[i, j, k] = i + j + k
+Note that extension module functions need to specify argument types. In this case, the argument is a 3-dimensional array of type float32, which is expressed as np.ndarray[np.float32, 3] in Codon.
+
+Now we can use a setup script setup.py to create the extension module as described in the Codon Python extension docs:
+
+
+python3 setup.py build_ext --inplace  # setup.py from docs linked above
+Finally, we can call the function from Python:
+
+
+from codon_initialize import initialize
+import torch
+
+tensor = torch.empty(128, 128, 128)
+initialize(tensor.numpy())
+print(tensor)
+Note that there is no compilation happening at runtime with this approach. Instead, everything is compiled ahead of time when creating the extension. The timing is the same as the first approach.
+
+You can also use any Codon compilation flags with this approach by adding them to the spawn call in the setup script. For example, you can use the -disable-exceptions flag to disable runtime exceptions, which can yield performance improvements and generate more streamlined code.
+
+Parallel processing¶
+Unlike Python, Codon has no global interpreter lock ("GIL") and supports full multithreading, meaning NumPy code can be parallelized. For example:
+
+
+import numpy as np
+import numpy.random as rnd
+import time
+
+N = 100000000
+n = 10
+
+rng = rnd.default_rng(seed=0)
+x = rng.normal(size=(N,n))
+y = np.empty(n)
+
+t0 = time.time()
+
+@par(num_threads=n)
+for i in range(n):
+    y[i] = x[:,i].sum()
+
+t1 = time.time()
+
+print(y)
+print(t1 - t0, 'seconds')
+# no par - 1.4s
+# w/ par - 0.4s
+GPU processing¶
+Codon-NumPy supports seamless GPU processing: arrays can be passed to and from the GPU, and array operations can be performed on the GPU using Codon's GPU backend. Here's an example that computes the Mandelbrot set:
+
+
+import numpy as np
+import gpu
+
+MAX    = 1000  # maximum Mandelbrot iterations
+N      = 4096  # width and height of image
+pixels = np.empty((N, N), int)
+
+def scale(x, a, b):
+    return a + (x/N)*(b - a)
+
+@gpu.kernel
+def mandelbrot(pixels):
+    i = (gpu.block.x * gpu.block.dim.x) + gpu.thread.x
+    j = (gpu.block.y * gpu.block.dim.y) + gpu.thread.y
+    c = complex(scale(j, -2.00, 0.47), scale(i, -1.12, 1.12))
+    z = 0j
+    iteration = 0
+
+    while abs(z) <= 2 and iteration < MAX:
+        z = z**2 + c
+        iteration += 1
+
+    pixels[i, j] = 255 * iteration/MAX
+
+mandelbrot(pixels, grid=(N//32, N//32), block=(32, 32))
+Here is the same code using GPU-parallelized for-loops:
+
+
+import numpy as np
+import gpu
+
+MAX    = 1000  # maximum Mandelbrot iterations
+N      = 4096  # width and height of image
+pixels = np.empty((N, N), int)
+
+def scale(x, a, b):
+    return a + (x/N)*(b - a)
+
+@par(gpu=True, collapse=2)  # <--
+for i in range(N):
+    for j in range(N):
+        c = complex(scale(j, -2.00, 0.47), scale(i, -1.12, 1.12))
+        z = 0j
+        iteration = 0
+
+        while abs(z) <= 2 and iteration < MAX:
+            z = z**2 + c
+            iteration += 1
+
+        pixels[i, j] = 255 * iteration/MAX
+Linear algebra¶
+Codon-NumPy fully supports the NumPy linear algebra module which provides a comprehensive set of functions for linear algebra operations. Importing the linear algebra module, just like in standard NumPy:
+
+
+import numpy.linalg as LA
+For example, the eig() function computes the eigenvalues and eigenvectors of a square matrix:
+
+
+eigenvalues, eigenvectors = LA.eig(np.diag((1, 2, 3)))
+print(eigenvalues)
+# 1.+0.j 2.+0.j 3.+0.j
+
+print(eigenvectors)
+# [[1.+0.j 0.+0.j 0.+0.j]
+#  [0.+0.j 1.+0.j 0.+0.j]
+#  [0.+0.j 0.+0.j 1.+0.j]]
+Just like standard NumPy, Codon will use an optimized BLAS library under the hood to implement many linear algebra operations. This defaults to OpenBLAS on Linux and Apple's Accelerate framework on macOS.
+
+Because Codon supports full multithreading, it's possible to use outer-loop parallelism to perform linear algebra operations in parallel. Here's an example that multiplies several matrices in parallel:
+
+
+import numpy as np
+import numpy.random as rnd
+import time
+
+N = 5000
+n = 10
+rng = rnd.default_rng(seed=0)
+a = rng.normal(size=(n, N, N))
+b = rng.normal(size=(n, N, N))
+y = np.empty((n, N, N))
+t0 = time.time()
+
+@par(num_threads=n)
+for i in range(n):
+    y[i, :, :] = a[i, :, :] @ b[i, :, :]
+
+t1 = time.time()
+print(y.sum())
+print(t1 - t0, 'seconds')  # Python - 53s
+                           # Codon  -  6s
+Tip
+
+When using Codon's outer-loop parallelism, make sure to set the environment variable OPENBLAS_NUM_THREADS to 1 (i.e. export OPENBLAS_NUM_THREADS=1) to avoid conflicts with OpenBLAS multithreading.
+
+NumPy-specific compiler optimizations¶
+Codon includes compiler passes that optimize NumPy code through methods like operator fusion, which combine distinct operations so that they can be executed during a single pass through the argument arrays, saving both execution time and memory (since intermediate arrays no longer need to be allocated).
+
+To showcase this, here's a simple NumPy program that approximates 
+. The code below generates two random vectors 
+ and 
+ with entries in the range 
+ and computes the fraction of pairs of points that lie in the circle of radius 
+ centered at 
+, which is approximately 
+ 
+ 
+.
+
+
+import time
+import numpy as np
+
+rng = np.random.default_rng(seed=0)
+x = rng.random(500_000_000)
+y = rng.random(500_000_000)
+
+t0 = time.time()
+# pi ~= 4 x (fraction of points in circle)
+pi = ((x-1)**2 + (y-1)**2 < 1).sum() * (4 / len(x))
+t1 = time.time()
+
+print(pi)
+print(t1 - t0, 'seconds')
+The expression (x-1)**2 + (y-1)**2 < 1 gets fused by Codon so that it is executed in just a single pass over the x and y arrays, rather than in multiple passes for each sub-expression x-1, y-1 etc. as is the case with standard NumPy.
+
+Here are the resulting timings on an M1 MacBook Pro:
+
+Python / standard NumPy: 2.4 seconds
+Codon: 0.42 seconds (6x speedup)
+You can display information about fused expressions by using the -npfuse-verbose flag of codon, as in codon run -release -npfuse-verbose pi.py. Here's the output for the program above:
+
+
+Optimizing expression at pi.py:10:7
+lt <array[bool, 1]> [cost=6]
+  add <array[f64, 1]> [cost=5]
+    pow <array[f64, 1]> [cost=2]
+      sub <array[f64, 1]> [cost=1]
+        a0 <array[f64, 1]>
+        a1 <i64>
+      a2 <i64>
+    pow <array[f64, 1]> [cost=2]
+      sub <array[f64, 1]> [cost=1]
+        a3 <array[f64, 1]>
+        a4 <i64>
+      a5 <i64>
+  a6 <i64>
+
+-> static fuse:
+lt <array[bool, 1]> [cost=6]
+  add <array[f64, 1]> [cost=5]
+    pow <array[f64, 1]> [cost=2]
+      sub <array[f64, 1]> [cost=1]
+        a0 <array[f64, 1]>
+        a1 <i64>
+      a2 <i64>
+    pow <array[f64, 1]> [cost=2]
+      sub <array[f64, 1]> [cost=1]
+        a3 <array[f64, 1]>
+        a4 <i64>
+      a5 <i64>
+  a6 <i64>
+As shown, the optimization pass employs a cost model to decide how to best handle a given expression, be it by fusing or evaluating sequentially. You can adjust the fusion cost thresholds via the following flags:
+
+-npfuse-always <cost1>: Expression cost below which to always fuse a given expression (default: 10).
+-npfuse-never <cost2>: Expression cost above which (>) to never fuse a given expression (default: 50).
+Given an expression cost C, the logic implemented in the pass is to:
+
+Always fuse expressions where C <= cost1.
+Fuse expressions where cost1 < C <= cost2 if there is no broadcasting involved.
+Never fuse expressions where C > cost2 and instead evaluate them sequentially.
+This logic is applied recursively to a given expression to determine the optimal evaluation strategy.
+
+You can disable these optimizations altogether by disabling the corresponding compiler pass via the flag -disable-opt core-numpy-fusion.
+
+I/O¶
+Codon-NumPy supports most of NumPy's I/O API. One important difference, however, is that I/O functions must specify the dtype and dimension of arrays being read, since Codon-NumPy array types are parameterized by dtype and dimension:
+
+
+import numpy as np
+
+a = np.arange(27, dtype=np.int16).reshape(3, 3, 3)
+np.save('arr.npy', a)
+
+# Notice the 'dtype' and 'ndim' arguments:
+b = np.load('arr.npy', dtype=np.int16, ndim=3)
+Writing arrays has no such requirement.
+
+Datetimes¶
+Codon-NumPy fully supports NumPy's datetime types: datetime64 and timedelta64. One difference from standard NumPy is how these types are specified. Here's an example:
+
+
+# datetime64 type with units of "1 day"
+# same as "dtype='datetime64[D]'" in standard NumPy
+dt = np.array(['2020-01-02', '2021-09-15', '2022-07-01'],
+              dtype=np.datetime64['D', 1])
+
+# timedelta64 type with units of "15 minutes"
+# same as "dtype='timedelta64[15m]'" in standard NumPy
+td = np.array([100, 200, 300], dtype=np.timedelta64['m', 15])
+Passing array data to C/C++¶
+You can pass an ndarray's underlying data pointer to a C/C++ function by using the data attribute of the array. For example:
+
+
+from C import foo(p: Ptr[float], n: int)
+
+arr = np.ndarray([1.0, 2.0, 3.0])
+foo(arr.data, arr.size)
+Of course, it's the caller's responsibility to make sure the array is contiguous as needed and/or pass additional shape or stride information. See the C interoperability docs for more information.
+
+Array ABI¶
+The ndarray[dtype, ndim] data structure has three fields, in the following order:
+
+shape: length-ndim tuple of non-negative 64-bit integers representing the array shape
+strides: length-ndim tuple of 64-bit integers representing the stride in bytes along each axis of the array
+data: pointer of type dtype to the array's data
+For example, ndarray[np.float32, 3] would correspond to the following C structure:
+
+
+struct ndarray_float32_3 {
+  int64_t shape[3];
+  int64_t strides[3];
+  float *data;
+};
+This can be used to pass an entire ndarray object to a C function without breaking it up into its constituent components.
+
+Performance tips¶
+Array layouts¶
+As with standard NumPy, Codon-NumPy performs best when array data is contiguous in memory, ideally in row-major order (also called "C order"). Most NumPy functions will return C-order arrays, but operations like slicing and transposing arrays can alter contiguity. You can use numpy.ascontiguousarray() to create a contiguous array from an arbitrary array.
+
+Linux huge pages¶
+When working with large arrays on Linux, enabling transparent hugepages can result in significant performance improvements.
+
+You can check if transparent hugepages are enabled via
+
+
+cat /sys/kernel/mm/transparent_hugepage/enabled
+and you can enable them via
+
+
+echo "always" | sudo tee /sys/kernel/mm/transparent_hugepage/enabled
+Disabling exceptions¶
+By default, Codon performs various validation checks at runtime (e.g. bounds checks when indexing an array) just like standard NumPy, and raises an exception if they fail. If you know your program will not raise or catch any exceptions, you can disable these checks through the -disable-exceptions compiler flag.
+
+Note that when using this flag, raising an exception will terminate the process with a SIGTRAP.
+
+Fast-math¶
+You can enable "fast-math" optimizations via the -fast-math compiler flag. It is advisable to use this flag with caution as it changes floating point semantics and makes assumptions regarding inf and nan values. For more information, consult LLVM's documentation on fast-math flags.
+
+Not-yet-supported¶
+The following features of NumPy are not yet supported, but are planned for the future: - String operations - Masked arrays - Polynomials
+
+A few miscellaneous Python-specific functions like get_include() are also not supported, as they are not applicable in Codon.
+
+Call Python from Codon
+There are two ways to call Python from Codon:
+
+from python import allows importing and calling Python functions from existing Python modules.
+@python allows writing Python code directly in Codon.
+In order to use these features, the CODON_PYTHON environment variable must be set to the appropriate Python shared library:
+
+
+export CODON_PYTHON=/path/to/libpython.X.Y.so
+For example, with a Homebrew-installed Python 3.9 on macOS, this might be
+
+
+/usr/local/opt/python@3.9/Frameworks/Python.framework/Versions/3.9/lib/libpython3.9.dylib
+Note that only Python versions 3.6 and later are supported.
+
+Tip: Finding libpython
+
+You can use this script to locate the Python shared library for the CODON_PYTHON environment variable. Simply run it as python3 find-python-library.py and it will print the library path.
+
+Info: Using virtual environments (venv)
+
+If you are using a virtual environment created with venv, set PYTHON_PATH to the site-packages directory inside your virtual environment (e.g. .venv/lib/python3.11/site-packages).
+
+Info: Using virtual environments (uv)
+
+If you using a virtual environment created with uv, you can use the following steps to set up the necessary environment variables. From the parent directory of your python project (where pyproject.toml is):
+
+Run uv python find --system and set PYTHON_HOME to the result.
+Set CODON_PYTHON to the libpython.dylib (or .so) file found in the folder from the previous step (e.g. lib/python3.11.dylib) as an absolute path.
+Set PYTHON_PATH to the site-packages folder inside your virtual environment (e.g .venv/lib/python3.11/site-packages).
+Import Python modules in Codon¶
+Python modules can be imported and used in Codon-compiled programs through a from python import <module> import statement. For example:
+
+
+from python import sys  # imports Python's 'sys' module
+print(sys.version)  # 3.11.12 (main, Apr  8 2025, 14:15:29) [Clang 17.0.0 (clang-1700.0.13.3)]
+You can also import third-party libraries. Here is an example that imports Matplotlib to create a simple plot:
+
+
+from python import matplotlib.pyplot as plt
+
+x = [1, 2, 3, 4, 5]
+y = [2, 5, 3, 6, 4]
+
+fig, ax = plt.subplots()
+ax.plot(x, y)
+plt.show()
+Objects created from imported Python modules can be manipulated and operated on from Codon. Internally, such operations are implemented by using CPython's C API. For example, we can create a Pandas dataframe in Codon, and perform operations on it:
+
+
+from python import pandas as pd
+df = pd.DataFrame({'A': [1, 2, 3], 'B': [4, 5, 6]})  # internally a Python object
+print(df['B'].max())  # 6
+Run Python code directly in Codon¶
+It is also possible to annotate functions with the @python decorator in order to have them execute in Python, instead of being compiled by Codon:
+
+
+@python
+def version():
+    # the following runs in plain Python
+    import sys
+    print(sys.version)
+
+version()  # 3.11.12 (main, Apr  8 2025, 14:15:29) [Clang 17.0.0 (clang-1700.0.13.3)]
+@python functions can specify return types, in which case returned values will be checked and converted to native Codon types:
+
+
+@python
+def foo():
+    return 2 + 2
+
+@python
+def bar() -> int:
+    return 2 + 2
+
+@python
+def baz() -> int:
+    return 'abc'
+
+
+print(foo())  # 4 (Python object)
+print(bar())  # 4 (native Codon int)
+print(baz())  # error: Python object did not have type 'int'
+Similarly, arguments can be type-annotated as well:
+
+
+@python
+def square(n: int) -> int:
+    return n * n
+
+print(square(4))  # 16
+Data conversions¶
+Codon uses two new magic methods to transfer data to and from Python:
+
+__to_py__: Produces a Python object (PyObject* in C) given a Codon object.
+__from_py__: Produces a Codon object given a Python object.
+For example:
+
+
+import python  # needed to initialize the Python runtime
+
+o = (42).__to_py__()  # type of 'o' is 'Ptr', equivalent to a pointer in C
+print(o)  # 0x100e00610
+
+n = int.__from_py__(o)  # converts Python object 'o' to native Codon integer
+print(n)  # 42
+Codon stores the results of __to_py__ calls by wrapping them in an instance of a new class called pyobj, which correctly handles the underlying Python object's reference count. All operations on pyobjs then go through CPython's API.
+
+Call Codon from Python
+Codon can be used within larger Python projects or codebases through its just-in-time (JIT) compilation mode. To use Codon's Python JIT compiler, install the codon-jit Python package:
+
+
+pip install codon-jit
+This library will attempt to use an installed version of Codon. If Codon is installed at a non-standard path, set the CODON_DIR environment variable to the installation path.
+
+Using @codon.jit¶
+The @codon.jit decorator causes the annotated function to be compiled by Codon, and automatically converts standard Python objects to native Codon objects. For example:
+
+
+import codon
+from time import time
+
+def is_prime_python(n):
+    if n <= 1:
+        return False
+    for i in range(2, n):
+        if n % i == 0:
+            return False
+    return True
+
+@codon.jit
+def is_prime_codon(n):
+    if n <= 1:
+        return False
+    for i in range(2, n):
+        if n % i == 0:
+            return False
+    return True
+
+t0 = time()
+ans = sum(1 for i in range(100000, 200000) if is_prime_python(i))
+t1 = time()
+print(f'[python] {ans} | took {t1 - t0} seconds')
+
+t0 = time()
+ans = sum(1 for i in range(100000, 200000) if is_prime_codon(i))
+t1 = time()
+print(f'[codon]  {ans} | took {t1 - t0} seconds')
+outputs:
+
+
+[python] 8392 | took 39.6610209941864 seconds
+[codon]  8392 | took 0.998633861541748 seconds
+Info
+
+@par (to parallelize for-loops) can be used in annotated functions via a leading underscore: _@par.
+
+Warning
+
+In general, changes made to objects in a JIT'd function will not be reflected in the host Python application, since objects passed to Codon are converted to Codon-native types. If objects need to be modified, consider returning any necessary values and performing modifications in Python. The one notable exception to this rule is NumPy arrays, which are not copied but instead have their data pointer passed directly to Codon, meaning array modifications are visible in the host Python application.
+
+Type conversions¶
+@codon.jit will attempt to convert any Python types that it can to native Codon types. The current conversion rules are as follows:
+
+Basic types like int, float, bool, str and complex are converted to the same type in Codon.
+
+Tuples are converted to Codon tuples (which are then compiled down to the equivalent of C structs).
+
+Collection types like list, dict and set are converted to the corresponding Codon collection type, with the restriction that all elements in the collection must have the same type.
+
+Other types are passed to Codon directly as Python objects. Codon will then use its Python object API ("pyobj") to handle and operate on these objects. Internally, this consists of calling the appropriate CPython C API functions, e.g. PyNumber_Add(a, b) for a + b.
+
+Custom types¶
+User-defined classes can be converted to Codon classes via @codon.convert:
+
+
+import codon
+
+@codon.convert
+class Foo:
+    __slots__ = 'a', 'b', 'c'
+
+    def __init__(self, n):
+        self.a = n
+        self.b = n**2
+        self.c = n**3
+
+    @codon.jit
+    def total(self):
+        return self.a + self.b + self.c
+
+print(Foo(10).total())  # 1110
+@codon.convert requires the annotated class to specify __slots__, which it uses to construct a generic Codon class (specifically, a named tuple) to store the class's converted fields.
+
+Passing globals to Codon¶
+Global variables, functions or modules can be passed to JIT'd functions through the pyvars argument to @codon.jit:
+
+
+import codon
+
+def foo(n):
+    print(f'n is {n}')
+
+@codon.jit(pyvars=['foo'])
+def bar(n):
+    foo(n)  # calls the Python function 'foo'
+    return n ** 2
+
+print(bar(9))  # 'n is 9' then '81'
+This also allows imported Python modules to be accessed by Codon. All pyvars are passed as Python objects. Note that JIT'd functions can call each other by default.
+
+Info
+
+pyvars takes in variable names as strings, not the variables themselves.
+
+Debugging¶
+@codon.jit takes an optional debug parameter that can be used to print debug information such as generated Codon functions and data types:
+
+
+import codon
+
+@codon.jit(debug=True)
+def sum_of_squares(v):
+    return sum(i**2 for i in v)
+
+print(sum_of_squares([1.4, 2.9, 3.14]))
+outputs:
+
+
+[codon::jit::execute] code:
+def sum_of_squares(v):
+    return sum(i**2 for i in v)
+-----
+[python] sum_of_squares(['List[float]'])
+[codon::jit::executePython] wrapper:
+@export
+def __codon_wrapped__sum_of_squares_0(args: cobj) -> cobj:
+    a0 = List[float].__from_py__(PyTuple_GetItem(args, 0))
+    return sum_of_squares(a0).__to_py__()
+-----
+20.229599999999998
+Internals and performance tips¶
+Under the hood, the codon module maintains an instance of the Codon JIT, which it uses to dynamically compile annotated Python functions. These functions are then wrapped in another generated function that performs the type conversions. The JIT maintains a cache of native function pointers corresponding to annotated Python functions with concrete input types. Hence, calling a JIT'd function multiple times does not repeatedly invoke the entire Codon compiler pipeline, but instead reuses the cached function pointer.
+
+Although object conversions from Python to Codon are generally cheap, they do impose a small overhead, meaning @codon.jit will work best on expensive and/or long-running operations rather than short-lived operations. By the same token, the more work can be done in Codon, the better, as opposed to repeatedly transferring back and forth.
+
+Create Python Extensions
+Codon includes a build mode called pyext for generating Python extensions (which are traditionally written in C, C++ or Cython):
+
+
+codon build -pyext extension.codon  # add -release to enable optimizations
+codon build -pyext accepts the following options:
+
+-o <output object>: Writes the compilation result to the specified file.
+-module <module name>: Specifies the generated Python module's name.
+Warning
+
+It is recommended to use the pyext build mode with Python versions 3.9 and up.
+
+Functions¶
+Extension functions written in Codon should generally be fully typed:
+
+
+def foo(a: int, b: float, c: str):  # return type will be deduced
+    return a * b + float(c)
+The pyext build mode will automatically generate all the necessary wrappers and hooks for converting a function written in Codon into a function that's callable from Python.
+
+Function arguments that are not explicitly typed will be treated as generic Python objects, and operated on through the CPython API.
+
+Function overloads are also possible in Codon:
+
+
+def bar(x: int):
+    return x + 2
+
+@overload
+def bar(x: str):
+    return x * 2
+This will result in a single Python function bar() that dispatches to the correct Codon bar() at runtime based on the argument's type (or raises a TypeError on an invalid input type).
+
+Types¶
+Codon class definitions can also be converted to Python extension types via the @dataclass(python=True) decorator:
+
+
+@dataclass(python=True)
+class Vec:
+    x: float
+    y: float
+
+    def __init__(self, x: float = 0.0, y: float = 0.0):
+        self.x = x
+        self.y = y
+
+    def __add__(self, other: Vec):
+        return Vec(self.x + other.x, self.y + other.y)
+
+    def __add__(self, other: float):
+        return Vec(self.x + other, self.y + other)
+
+    def __repr__(self):
+        return f'Vec({self.x}, {self.y})'
+Now in Python (assuming we compile to a module vec):
+
+
+from vec import Vec
+
+a = Vec(x=3.0, y=4.0)  # Vec(3.0, 4.0)
+b = a + Vec(1, 2)      # Vec(4.0, 6.0)
+c = b + 10.0           # Vec(14.0, 16.0)
+Building with setuptools¶
+Codon's pyext build mode can be used with setuptools. Here is an example setup.py script:
+
+Example setup.py
+Then, we can build with:
+
+
+python3 setup.py build_ext --inplace
+Finally, we can import mymodule in Python and use the module.
+
+
+
+
+project description:
+Preliminaries
+Use the same setup as in Week 1.
+
+Week 2 deliverable
+The goals of this week’s deliverable are:
+
+code analysis: get familiar with the unknown codebases;
+motif parsing: port popular BioPython’s motif discovery module to Codon;
+Your job is to port BioPython’s Bio.motifs package to Codon.
+
+The source code can be found on Github. You only need to port the following parts:
+
+Bio.motifs (__init__.py)
+Bio.motifs.matrix
+Bio.motifs.minimal
+Bio.motifs.thresholds
+Feel free to use from python import for any missing pieces (especially for image generation, web access and weird parsing libraries such as libxml).
+
+You should implement all related tests as well. Remember: you do not need to implement tests for the parts that were not implemented (e.g., Bio.motifs.meme).
+
+This assignment will take you some time—this is the first “real” assignment for this term, so plan accordingly. I will be around to help with this one.
+
+To speed things up, you are allowed to team up with another person and jointly submit the assignment. Both members should upload the code to their GitHub repositories; only one should submit the assignment to the Brightspace.
+
+Alternative to BioPython
+If you feel that BioPython is too hard, try trviz. Here, implement everything except for the visualizer (which can be left to Python).
+
+The paper describing trviz can be found here.
+
+What (and when) to submit?
+Submit a single link (the repository URL pointing to the commit to be graded) via Brightspace before Wed, Oct 1, at 23:59. Also mention your team member if submitting jointly.
+
+Example:
+
+https://github.com/Jong-hun-Park/trviz/commit/894be7b424d8bf8ad4ec474ab8caa97dccd3181e 
+Team member: Kermit the Frog
+Important
+Do not submit whole BioPython. Assume that it is installed (and install it in CI). Just extract few files that are needed for the assignment.
+Have a single file test.py that contains tests for both Codon and Python. Codon does not support unittest testing yet; hence, change every test method to test function annotated with @test. Both codon test.py and python test.py should produce same results. If some tests are not implemented in Codon, comment them out.
+Example:
+
+# File test.py
+if __codon__:
+   from bio_codon import motifs  # depending on your naming
+else:
+   from Bio import motifs  # python path; you do not have to include Python files into the repository
+
+@test
+def test_format():
+   ...
+   assertEqual(s3, expected_transfac)
+test_format()
+...
+run code snippet
+Visit Manage Class to disable runnable code snippets×
+Grading
+Your grade is based on the total code coverage (more methods ported, more points). Tests and CI are expected in all cases. Please use the following CI setup: https://github.com/inumanag/fall25-csc-bioinf/blob/main/.github/workflows/actions.yml. Don’t forget to install BioPython in CI.
+
+You are expected to understand the code. You might be called to defend your submission at random during office hours.
+
+Please describe all steps and gotchas in report.md in week2/ directory. Also include the time needed to complete this assignment (an estimate is OK). And don’t forget ai.md as well.
+
+
+class forum posts:
+Codon Error in __init__.py
+Updated 2 hours ago by Anonymous Poet
+Hi, I was wondering what this error means and how do I fix it? 
+
+The line at which the error occurs (321) is this: 
+
+self.counts = matrix.FrequencyPositionMatrix(alphabet, native_freqs)
+
+
+porting
+
+Edit
+
+0
+
+
+
+12 views
+Students' Answer
+
+Updated 2 hours ago by Ashley Osuna
+I would try doing matrix.FrequencyPositionMatrix(alphabet=alphabet, counts=native_freqs) (or alignment=native_freqs depending on whether native_freqs corresponds to counts or an alignment)
+Edit
+
+0
+Instructors' Answer
+Updated 3 minutes ago by Ibrahim Numanagić
+All arguments after *args must be specified by name when calling the method (same as in Python); e.g., Motif(..., alphabet=..., alignment=..., counts=...).
+
+
+0
+3 Followup Discussions
+
+Unresolved
+@50_f1
+
+Anonymous Poet  1 hour ago
+When I do that, it says "error: positional argument follows keyword argument"
+
+0
+Kelly Ojukwu  60 minutes ago
+Can you post the method signature of your constructor(s) pls and whether your classes use inheritance? If so what classes inherit from what other classes?
+
+
+0
+Anonymous Poet  3 minutes ago
+class FrequencyPositionMatrix(GenericPositionMatrix):
+class GenericPositionMatrix:
+    """Base class for the support of position matrix operations."""
+    dictt: Dict[str, list[float]]
+    length: Optional[int]
+    alphabet: str
+    def __init__(self, alphabet, values):
+        """Initialize the class."""
+        self.dictt = {}
+        self.length = None
+
+I would like to preface this by requesting if you could let me know if I am going off track in the assignment by having this question.
+
+Working on the assertRaises function for test_motifs.py, but I am encountering an error I am not sure how to solve. When I call something like
+
+m.format('foo_bar')
+
+from the test_format function, I get the following error message:
+
+PyError: Unknown format type foo_bar
+
+I looked at the code in the __init__.py file and realized this occurs when the ValueError is being raised, which is the expected behavior. Why do I see a PyError instead of the expected ValueError? How can I convert it to the correct error, if I can, or should I just treat every error as a PyError and write my try except statement like this:
+
+try:
+
+    function(*args, **kwargs)
+
+except PyError:
+
+    ...
+
+project
+
+Edit
+
+1
+
+
+
+25 views
+Students' Answer
+Where students collectively construct a single answer
+
+Instructors' Answer
+Updated 1 day ago by Ibrahim Numanagić
+PyError means that the exception is raised from the Python. You can use except python.ValueError to narrow it down to ValueError from Python (ValueError is by default just catching Codon’s exceptions).
+
+
+0
+1 Followup Discussions
+
+Resolved
+@44_f1
+
+Ashley Osuna  3 days ago
+I don't know if this is exactly what you're asking or if it helps at all, but I raise a ValueError in my format function (exactly how they have it in the Bio repo) and call the assertRaises like this in my test: 
+
+self.assertRaises(ValueError, lambda : m.format(format_spec="foo_bar")), and it works for me.
+
+Has anyone managed to port PositionSpecificScoringMatrix? i have the following code (pretty much just copied as it is from biopython, but since this function calls a c file, I am struggling with typing in codon and keep getting these types of errors.
+
+Instructors' Answer
+Updated 6 days ago by Ibrahim Numanagić
+Nice catch!
+
+You can just port that code from C to Codon (LLMs should be good at giving you initial sketch). That code looks simple enough. Some methods are often implemented in C because Python is slow—that should not be the case in Codon.
+
+0
+1 Followup Discussions
+
+Resolved
+Ibrahim Numanagić  5 days ago
+Also: if stuck, please don’t waste too much time on it but post the (incomplete) code here and we can all together make it work with Codon—I’ve never said you can’t do that 😃 Would be happy to show to everybody how to do that 😃
+Hi,
+
+I went to office hours today and you mentioned I should write in here the issue that I was having. It seems that I cannot access the actual dictionary from the subclass even when I call the parent's __init__ method. Right now, if I comment out line, 199, then my program runs, and I do see the print statement from line 198 correctly, but when I try indexing the dictionary from this subclass (like in line 199) then I get errors.
+
+
+Hi Ashley,
+
+Sorry for the delay on this one—I’ve looked at it but am not able to provide a solution (this is a Codon bug). Please try restructuring the code so that you do not use the inheritance or method overloading (should be easy in this case).
+
+I’ll give you +2 extra days for this (not counted towards the extra days). In either case, if you can’t make it work, mention in your report (and which test cases are impacted).
+
+Also: can you share the exact repo/commit ID with the problematic code? Screenshots are not helpful to reproduce the issue.
+
+
+ am having an issue with python imports as it never seems to run past them. In __init__.py, for example, I have this at the beginning of the code:
+
+from python import warnings
+print(1)
+
+The 1 is never printed. However, if I were to import sys:
+
+import sys
+print(1)
+
+The 1 is printed. This is making me very confused about how things are being handled. How do I proceed?
+project
+
+Edit
+
+0
+
+
+
+28 views
+Students' Answer
+Where students collectively construct a single answer
+
+Instructors' Answer
+Updated 1 week ago by Ibrahim Numanagić
+Can I get more details? Can you try:
+
+from python import os
+print(1)
+and run it as codon run test.codon and see what output do you get?
+
+
+0
+4 Followup Discussions
+
+Resolved
+@38_f1
+
+Anonymous Scale  1 week ago
+I don't get an output. I am not sure what other details to give.
+
+
+
+
+0
+Ibrahim Numanagić  1 week ago
+Please come to my office today after the class (I have 30 minutes today after class).
+
+
+1
+Reply
+
+Resolved
+@38_f2
+
+Wenhui Ma  1 day ago
+I met similar problem: codon does not support like sys.path/exec, so I have to put codon test.py at the same path as codon codes to avoid it...
+
+0
+Ibrahim Numanagić  12 hours ago
+It is OK to have separate test files (.py/.codon) if you cannot make it work together.
+
+
+I'm working on Deliverable 2 and am running into an issue where I believe my computer is recognizing my motifs.py file as incompatible. For example, I'm running this line in test_motifs.py:
+
+from motifsc import Motif, create_motif
+
+I used something similar in the last deliverable: "from dbgcodon import DBG", and it worked perfectly well. However, this is the error I'm getting from my tests_motifs.py: 
+
+CError: dlopen(libpython.dylib, 0x0002): tried: 'libpython.dylib' (no such file), '/System/Volumes/Preboot/Cryptexes/OSlibpython.dylib' (no such file), '/Users/username/.codon/bin/libpython.dylib' (no such file), '/Users/username/.codon/bin/../lib/codon/libpython.dylib' (no such file), '/usr/lib/libpython.dylib' (no such file, not in dyld cache), 'libpython.dylib' (no such file)
+
+Raised from: std.internal.dlopen.dlopen.1:0
+/Users/username/.codon/lib/codon/stdlib/internal/dlopen.codon:26:9
+
+Backtrace:
+  [0x104d70e4f] std.internal.dlopen.dlopen.1:0[str,int].795 at /Users/username/.codon/lib/codon/stdlib/internal/dlopen.codon:26:9
+  [0x104d75e07] std.internal.python.setup_python.0:0[bool].1238 at /Users/username/.codon/lib/codon/stdlib/internal/python.codon
+  [0x104d75eb7] std.internal.python.ensure_initialized.0:0[bool].1240 at /Users/username/.codon/lib/codon/stdlib/internal/python.codon:932:22
+  [0x104d76e03] pyobj._import:0[str].1341 at /Users/username/.codon/lib/codon/stdlib/internal/python.codon:927:46
+  [0x104d76f37] %_import_motifsc_88_call.0:0.1343 at /Users/username/Documents/Year4/CSC427/fall25-csc-bioinf/week2/Bio/test_motifs.py:3:1
+  [0x104d77f93] main.0 at /Users/username/Documents/Year4/CSC427/fall25-csc-bioinf/week2/Bio/test_motifs.py:4:1
+zsh: abort      codon run test_motifs.py
+
+I know the computer is "seeing" the file, since the code will give me a different error if I change the method name in motifsc.py. I'm not sure why it won't see the file when I run it through Codon, though. Or is it something else that's going wrong? Any help would be appreciated :)
+
+Just to add, my motifsc.py file starts like this: 
+
+
+# Codon-native Bio.motifs module
+
+from typing import Dict
+from python import Biopython as Bio
+#import urllib
+#from python import warnings
+
+class Motif:
+    alphabet: str
+    counts: Dict[str, Array[int]]
+    length: int
+    mask: array[int]
+    pseudocounts: Dict[str, float]
+    background: Dict[str, float]
+
+...
+
+porting
+
+Edit
+
+0
+
+
+
+27 views
+Students' Answer
+Where students collectively construct a single answer
+
+Instructors' Answer
+Updated 1 week ago by Ibrahim Numanagić
+You need to set CODON_PYTHON; see here for details https://docs.exaloop.io/integrations/python/python-from-codon/
+
+The CI script also shows you how to do it (you should understand that script, not just blindly copy-paste it).
+
+If still stuck, please come to office hours, and I can help you with that. Make sure, however, to try (to at least understand) CI command.
