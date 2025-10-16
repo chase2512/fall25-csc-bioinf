@@ -1,5 +1,5 @@
 import time
-import sys
+from python import sys
 
 # Add the code directory to Python path (hardcoded relative path)
 sys.path.insert(0, '../code')
