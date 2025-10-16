@@ -18,32 +18,60 @@ def test_distances():
 def test_upgma():
     """Test UPGMA algorithm"""
     distances = np.array([
-        [0.0, 1.0, 7.0, 7.0, 9.0],
-        [1.0, 0.0, 7.0, 6.0, 8.0],
-        [7.0, 7.0, 0.0, 2.0, 4.0],
-        [7.0, 6.0, 2.0, 0.0, 3.0],
-        [9.0, 8.0, 4.0, 3.0, 0.0],
-    ])
+        [0, 1, 7, 7, 9],
+        [1, 0, 7, 6, 8],
+        [7, 7, 0, 2, 4],
+        [7, 6, 2, 0, 3],
+        [9, 8, 4, 3, 0],
+    ], dtype=float)
     
     tree = upgma(distances)
-    newick = tree.to_newick(include_distance=False)
     assert len(tree) == 5
     assert tree.root is not None
 
 def test_neighbor_joining():
     """Test Neighbor Joining algorithm"""
-    distances = np.array([
-        [0.0, 1.0, 7.0, 7.0, 9.0],
-        [1.0, 0.0, 7.0, 6.0, 8.0],
-        [7.0, 7.0, 0.0, 2.0, 4.0],
-        [7.0, 6.0, 2.0, 0.0, 3.0],
-        [9.0, 8.0, 4.0, 3.0, 0.0],
-    ])
+    dist = np.array([
+        [0, 5, 4, 7, 6, 8],
+        [5, 0, 7, 10, 9, 11],
+        [4, 7, 0, 7, 6, 8],
+        [7, 10, 7, 0, 5, 9],
+        [6, 9, 6, 5, 0, 8],
+        [8, 11, 8, 9, 8, 0],
+    ], dtype=float)
+
+    test_tree = neighbor_joining(dist)
     
-    tree = neighbor_joining(distances)
-    newick = tree.to_newick(include_distance=False)
-    assert len(tree) == 5
-    assert tree.root is not None
+    ref_tree = Tree(
+        TreeNode(
+            [
+                TreeNode(
+                    [
+                        TreeNode(
+                            [
+                                TreeNode(index=0),
+                                TreeNode(index=1),
+                            ],
+                            [1, 4],
+                        ),
+                        TreeNode(index=2),
+                    ],
+                    [1, 2],
+                ),
+                TreeNode(
+                    [
+                        TreeNode(index=3),
+                        TreeNode(index=4),
+                    ],
+                    [3, 2],
+                ),
+                TreeNode(index=5),
+            ],
+            [1, 1, 5],
+        )
+    )
+    
+    assert test_tree == ref_tree
 
 if __name__ == "__main__":
     start = time.time()
@@ -54,5 +82,9 @@ if __name__ == "__main__":
     
     end = time.time()
     elapsed_ms = int((end - start) * 1000)
+    
+    # Ensure at least 1ms is reported
+    if elapsed_ms == 0:
+        elapsed_ms = 1
     
     print(f"python      {elapsed_ms}ms")

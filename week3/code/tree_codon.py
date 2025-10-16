@@ -40,51 +40,34 @@ class set:
 
 
 class TreeNode:
-    """
-    TreeNode represents a node in a rooted tree.
-    
-    There are two TreeNode subtypes:
-        - Leaf node - Cannot have child nodes but has an index referring
-          to an array-like reference object.
-        - Intermediate node - Has child nodes but no reference index
-    """
-    
     _index: int
     _distance: float
-    _is_root: bool
     _parent: Optional[TreeNode]
     _children: List[TreeNode]
-
+    
     def __init__(self, children=None, distances=None, index: Optional[int] = None):
-        self._is_root = False
+        if children is None:
+            self._children = []
+        else:
+            self._children = [i for i in children]
+        
+        if index is not None:
+            self._index = index
+        else:
+            self._index = -1
+        
         self._distance = 0.0
         self._parent = None
         
-        if index is None:
-            # Intermediate node
-            if children is None:
-                raise ValueError("Either children or index must be provided")
-            if distances is None:
-                raise ValueError("Distances must be provided with children")
-            if len(children) != len(distances):
-                raise ValueError("Number of children and distances must match")
-            
-            self._index = -1
-            self._children = [i for i in children]
-            
-            for i in range(len(children)):
-                child = children[i]
-                distance = float(distances[i])
-                child._set_parent(self, distance)
-        else:
-            # Leaf node
-            if index < 0:
-                raise ValueError("Index cannot be negative")
-            if children is not None or distances is not None:
-                raise ValueError("Leaf nodes cannot have children")
-            
-            self._index = index
-            self._children = []
+        if distances is not None:
+            if len(self._children) != len(distances):
+                raise ValueError(
+                    f"Expected {len(self._children)} distances, "
+                    f"got {len(distances)}"
+                )
+            for child, distance in zip(self._children, distances):
+                child._parent = self
+                child._distance = distance
     
     def _set_parent(self, parent: TreeNode, distance: float):
         if self._parent is not None or self._is_root:
