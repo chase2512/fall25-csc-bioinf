@@ -45,7 +45,7 @@ jobs:
 
       - name: Week 3 - Phylo Tests
         run: |
-          cd week3/code
+          cd week3/test
           chmod +x evaluate.sh
           ./evaluate.sh
       
