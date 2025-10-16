@@ -382,18 +382,25 @@ class Tree:
         leaves_unsorted = self._root.get_leaves()
         leaf_count = len(leaves_unsorted)
         
-        indices: List[int] = []
-        for leaf in leaves_unsorted:
-            indices.append(leaf.index)
+        # Create a temporary list that allows None
+        temp_leaves: List[Optional[TreeNode]] = [None] * leaf_count
         
-        self._leaves = [None] * leaf_count
-        for i in range(len(indices)):
-            idx = indices[i]
+        for leaf in leaves_unsorted:
+            idx = leaf.index
+            if idx is None:
+                raise ValueError("Leaf node has no index")
             if idx >= leaf_count:
                 raise ValueError(f"Index {idx} is out of range for {leaf_count} leaves")
-            if self._leaves[idx] is not None:
+            if temp_leaves[idx] is not None:
                 raise ValueError(f"Duplicate leaf index {idx}")
-            self._leaves[idx] = leaves_unsorted[i]
+            temp_leaves[idx] = leaf
+        
+        # Now convert to non-optional list (all should be filled)
+        self._leaves = []
+        for leaf in temp_leaves:
+            if leaf is None:
+                raise ValueError("Missing leaf in tree")
+            self._leaves.append(leaf)
     
     def __copy_create__(self):
         return Tree(self._root.copy())
