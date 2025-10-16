@@ -1,9 +1,8 @@
 import time
 import sys
-from os.path import dirname, join
 
-# Add the code directory to Python path
-sys.path.insert(0, join(dirname(__file__), '..', 'code'))
+# Add the code directory to Python path (hardcoded relative path)
+sys.path.insert(0, '../code')
 
 import numpy as np
 from tree_codon import Tree, TreeNode
