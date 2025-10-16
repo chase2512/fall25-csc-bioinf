@@ -1,4 +1,5 @@
 #!/bin/bash
+set -euo pipefail
 
 # Get the directory where this script is located
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -11,8 +12,8 @@ export PYTHONPATH="${CODE_DIR}:${PYTHONPATH}"
 echo "Language    Runtime"
 echo "-------------------"
 
-# Run Python test
-python3 test_phylo_python.py
+# Run Python test (uses biotite from pip)
+python3 "${SCRIPT_DIR}/test_phylo_python.py"
 
-# Run Codon test (sys.path.insert works for Codon too)
-codon run -release test_phylo_codon.py
+# Run Codon test (uses our ported code)
+codon run -release "${SCRIPT_DIR}/test_phylo_codon.py"
